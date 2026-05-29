@@ -1,94 +1,51 @@
 # Objava PWA na splet (GitHub Pages)
 
-Po objavi aplikacija deluje na telefonu **brez** `zagon.bat` in brez vklopljenega računalnika.
-
-Potrebujete: brezen GitHub račun, internet.
-
----
-
-## 1. Nov repozitorij na GitHub
-
-1. Odprite https://github.com/new  
-2. Ime npr. **`vreme-koper`** (poljubno)  
-3. **Public**  
-4. Brez README / brez .gitignore (že imate v projektu)  
-5. **Create repository**
-
----
-
-## 2. Naložite kodo iz računalnika
-
-V **PowerShell** (zamenjajte `VAS_UPORABNIK` in `vreme-koper`):
+## 1. Naložite kodo (če še niste)
 
 ```powershell
-cd e:\Projekti\Vreme\pwa
-
-git init
-git add .
-git commit -m "Vreme Koper PWA"
-git branch -M main
-git remote add origin https://github.com/VAS_UPORABNIK/vreme-koper.git
-git push -u origin main
-```
-
-Če GitHub vpraša za prijavo, uporabite **Personal Access Token** (ne geslo).
-
----
-
-## 3. Vklopite GitHub Pages (obvezno!)
-
-1. Odprite: **https://github.com/mitjazig/Vreme/settings/pages**  
-2. Pod **Build and deployment** → **Source**: izberite **GitHub Actions** (ne „Deploy from branch“)  
-3. Če možnosti še ni: repozitorij mora biti **Public** (ali imeti GitHub Pro za zasebne strani)  
-4. Shranite / počakajte minuto  
-
-## 4. Ponovno zaženite objavo
-
-Po vklopu Pages:
-
-```powershell
-git add .github/workflows/pages.yml
-git commit -m "Popravek GitHub Pages workflow"
-git push
-```
-
-Ali na GitHubu: **Actions** → **Objavi na GitHub Pages** → **Run workflow**.
-
-Workflow mora biti zelen.  
-
-Čez 1–2 minuti je stran na:
-
-```
-https://mitjazig.github.io/Vreme/
-```
-
-(Zgodovina: `.../history.html`)
-
----
-
-## 5. Namestitev na telefon
-
-1. Odprite zgornji URL v **Chrome** (Android) ali **Safari** (iPhone)  
-2. **Dodaj na začetni zaslon** / **Namesti aplikacijo**  
-3. Google Sheet mora ostati javen: *Kdorkoli s povezavo → Ogledovalec*
-
----
-
-## Posodobitve
-
-Ko spremenite kodo lokalno:
-
-```powershell
-cd e:\Projekti\Vreme\pwa
+cd E:\Projekti\Vreme\pwa
 git add .
 git commit -m "Posodobitev"
 git push
 ```
 
-GitHub Pages se posodobi sam (1–2 min).
+---
+
+## 2. Vklopite GitHub Pages (enkrat)
+
+1. Odprite: **https://github.com/mitjazig/Vreme/settings/pages**
+2. **Build and deployment** → **Source**: **Deploy from a branch**
+3. **Branch**: `gh-pages` · mapa **`/ (root)`**
+4. Kliknite **Save**
+
+> Repozitorij mora biti **Public** (brezplačni GitHub Pages).
 
 ---
 
-## Lokalno testiranje (opcijsko)
+## 3. Zaženite workflow
 
-Dvojni klik **`zagon.bat`** ali `npx serve -l 3456 .`
+Po `git push` gre na **Actions** → **Objavi na GitHub Pages**.
+
+Prvi uspešen zagon ustvari vejo `gh-pages`. Čez 1–2 minuti je stran na:
+
+**https://mitjazig.github.io/Vreme/**
+
+Zgodovina: **https://mitjazig.github.io/Vreme/history.html**
+
+---
+
+## 4. Telefon
+
+Odprite URL v Chrome/Safari → **Dodaj na začetni zaslon**.
+
+Google Sheet: *Kdorkoli s povezavo → Ogledovalec*.
+
+---
+
+## Težave?
+
+| Težava | Rešitev |
+|--------|---------|
+| Actions rdeče | Preberite log; ponovno **Run workflow** |
+| 404 na URL | Počakajte 2 min; preverite Settings → Pages (veja `gh-pages`) |
+| Prazna stran | Osvežite s Ctrl+Shift+R |

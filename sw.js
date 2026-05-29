@@ -1,4 +1,4 @@
-const CACHE = 'vreme-pwa-static-v7';
+const CACHE = 'vreme-pwa-static-v8';
 
 const ASSETS = [
   './',
@@ -12,9 +12,12 @@ const ASSETS = [
   './js/weather-ui.js',
   './js/charts.js',
   './js/history-charts.js',
+  './js/install-ui.js',
   './js/app.js',
   './js/history.js',
   './manifest.webmanifest',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
   './icons/icon-192.svg',
   './icons/icon-512.svg',
 ];

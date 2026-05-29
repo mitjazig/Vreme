@@ -1,4 +1,5 @@
 import { REFRESH_MS, APP_VERSION } from './config.js';
+import { setupInstallUI } from './install-ui.js';
 import { loadWeatherBundle } from './sheets.js';
 import { renderHourlyChart, renderDailyChart } from './charts.js';
 import {
@@ -247,23 +248,6 @@ function registerServiceWorker() {
     .catch(console.warn);
 }
 
-function setupInstallPrompt() {
-  let deferred;
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferred = e;
-    $('#btn-install')?.classList.remove('hidden');
-  });
-
-  $('#btn-install')?.addEventListener('click', async () => {
-    if (!deferred) return;
-    deferred.prompt();
-    await deferred.userChoice;
-    deferred = null;
-    $('#btn-install')?.classList.add('hidden');
-  });
-}
-
 async function init() {
   if (location.protocol === 'file:') {
     setStatus(
@@ -275,7 +259,7 @@ async function init() {
 
   await clearStaleCaches();
   registerServiceWorker();
-  setupInstallPrompt();
+  setupInstallUI();
   $('#btn-refresh')?.addEventListener('click', refresh);
 
   const cached = loadCache();

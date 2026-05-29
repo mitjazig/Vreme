@@ -678,6 +678,80 @@ body.is-loading .stat-pill {
   }
 }
 
+/* —— Namestitev PWA —— */
+.install-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: end center;
+  padding: 1rem;
+  padding-bottom: calc(1rem + var(--safe-bottom));
+}
+
+.install-modal.hidden {
+  display: none;
+}
+
+.install-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.install-modal__panel {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1rem 1rem;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5);
+}
+
+.install-modal__close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.65rem;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.install-modal__title {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  padding-right: 1.5rem;
+}
+
+.install-steps {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.install-steps li {
+  margin-bottom: 0.55rem;
+}
+
+.install-steps strong {
+  color: var(--text);
+}
+
+.install-icon {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 0.85rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wind-compass__needle {
     transition: none;

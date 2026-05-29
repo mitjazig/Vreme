@@ -1,3 +1,6 @@
+# Objavi na GitHub Pages (veja gh-pages)
+# V repozitoriju: Settings → Pages → Source: Deploy from branch → gh-pages → / (root)
+
 name: Objavi na GitHub Pages
 
 on:
@@ -6,32 +9,19 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
+  contents: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Koda
         uses: actions/checkout@v4
 
-      - name: Nastavi GitHub Pages
-        uses: actions/configure-pages@v4
-
-      - name: Naloži stran
-        uses: actions/upload-pages-artifact@v3
+      - name: Objavi na gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: .
-
-      - name: Objavi
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          publish_branch: gh-pages
+          exclude_assets: '.github'
