@@ -24,6 +24,9 @@ jobs:
       - name: Koda
         uses: actions/checkout@v4
 
+      - name: Nastavi GitHub Pages
+        uses: actions/configure-pages@v4
+
       - name: Naloži stran
         uses: actions/upload-pages-artifact@v3
         with:

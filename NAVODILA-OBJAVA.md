@@ -35,23 +35,38 @@ git push -u origin main
 
 ---
 
-## 3. Vklopite GitHub Pages
+## 3. Vklopite GitHub Pages (obvezno!)
 
-1. Na GitHubu: repozitorij → **Settings** → **Pages**  
-2. Pod **Build and deployment** → Source: **GitHub Actions**  
-3. Po `git push` pojdi na zavihek **Actions** – workflow **Objavi na GitHub Pages** mora biti zelen  
+1. Odprite: **https://github.com/mitjazig/Vreme/settings/pages**  
+2. Pod **Build and deployment** → **Source**: izberite **GitHub Actions** (ne „Deploy from branch“)  
+3. Če možnosti še ni: repozitorij mora biti **Public** (ali imeti GitHub Pro za zasebne strani)  
+4. Shranite / počakajte minuto  
+
+## 4. Ponovno zaženite objavo
+
+Po vklopu Pages:
+
+```powershell
+git add .github/workflows/pages.yml
+git commit -m "Popravek GitHub Pages workflow"
+git push
+```
+
+Ali na GitHubu: **Actions** → **Objavi na GitHub Pages** → **Run workflow**.
+
+Workflow mora biti zelen.  
 
 Čez 1–2 minuti je stran na:
 
 ```
-https://VAS_UPORABNIK.github.io/vreme-koper/
+https://mitjazig.github.io/Vreme/
 ```
 
 (Zgodovina: `.../history.html`)
 
 ---
 
-## 4. Namestitev na telefon
+## 5. Namestitev na telefon
 
 1. Odprite zgornji URL v **Chrome** (Android) ali **Safari** (iPhone)  
 2. **Dodaj na začetni zaslon** / **Namesti aplikacijo**  
