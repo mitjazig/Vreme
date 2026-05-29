@@ -46,36 +46,30 @@
     <p id="status" class="status" role="status">Nalagam podatke…</p>
 
     <main class="main">
-      <section class="hero card card--hero" aria-label="Trenutno vreme">
-        <div class="hero__glow" aria-hidden="true"></div>
-        <div class="hero__icon" id="weather-icon" aria-hidden="true">🌡️</div>
-        <div class="hero__temp">
-          <span id="temp-main" class="hero__value">—</span>
-          <span id="temp-unit" class="hero__unit">°C</span>
-        </div>
-        <p id="hero-sub" class="hero__sub">—</p>
-        <div id="day-range" class="hero__range"></div>
-      </section>
-
-      <section class="wind-row">
-        <div class="card wind-compass" aria-label="Smer vetra">
-          <span class="metric__label">Smer vetra</span>
-          <div class="wind-compass__ring">
-            <span class="wind-compass__n">S</span>
-            <span class="wind-compass__e">V</span>
-            <span class="wind-compass__s">J</span>
-            <span class="wind-compass__w">Z</span>
-            <div id="wind-needle" class="wind-compass__needle"></div>
+      <section class="card now-panel" aria-label="Trenutno vreme">
+        <div class="now-panel__top">
+          <span id="weather-icon" class="now-panel__icon" aria-hidden="true">🌡️</span>
+          <div class="now-panel__main">
+            <div class="now-panel__temp">
+              <span id="temp-main">—</span><span class="now-panel__unit">°C</span>
+            </div>
+            <p id="hero-sub" class="now-panel__time">—</p>
           </div>
-          <p id="wind-dir-label" class="wind-compass__dir">—</p>
+          <div id="day-range" class="now-panel__extremes"></div>
         </div>
-        <div class="card wind-speed-box">
-          <span class="metric__label">Hitrost</span>
-          <span id="wind-speed" class="wind-speed-box__value">—</span>
+        <div class="now-panel__wind">
+          <div class="wind-compass wind-compass--sm" aria-label="Smer vetra">
+            <div class="wind-compass__ring">
+              <div id="wind-needle" class="wind-compass__needle"></div>
+            </div>
+          </div>
+          <div class="now-panel__wind-txt">
+            <span id="wind-dir-label" class="now-panel__wind-dir">—</span>
+            <span id="wind-speed" class="now-panel__wind-spd">—</span>
+          </div>
         </div>
+        <div id="metrics" class="now-panel__grid" aria-label="Meritve"></div>
       </section>
-
-      <section id="metrics" class="metrics" aria-label="Meritve"></section>
 
       <section class="card chart-card">
         <div class="card__head">
