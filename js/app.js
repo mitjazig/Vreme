@@ -47,9 +47,7 @@ function setLoading(on) {
 
 function updateWindCompass(deg) {
   const needle = $('#wind-needle');
-  const label = $('#wind-dir-label');
   if (needle) needle.style.transform = `rotate(${deg ?? 0}deg)`;
-  if (label) label.textContent = windLabel(deg);
 }
 
 function renderMetrics(latest) {
@@ -57,37 +55,21 @@ function renderMetrics(latest) {
   if (!grid || !latest) return;
 
   const items = [
-    { label: 'Vlažnost', value: formatNum(latest.humidity, '%', 0) },
-    { label: 'Veter', value: `${formatNum(latest.windSpeed, ' m/s')} (${windLabel(latest.windDir)})` },
-    { label: 'Sunek', value: formatNum(latest.windGust, ' m/s') },
-    { label: 'Tlak', value: formatNum(latest.pressure, ' hPa') },
-    { label: 'Padavine', value: formatNum(latest.precipTotal, ' mm', 2) },
-    { label: 'Intenzivnost', value: formatNum(latest.precipRate, ' mm/h', 1) },
-    { label: 'UV', value: formatNum(latest.uv, '', 0) },
-    { label: 'Sončno', value: formatNum(latest.solar, ' W/m²', 0) },
-    { label: 'Rosišče', value: formatTemp(latest.dewpt) },
+    { label: 'Vlažnost', short: 'Vlaž.', value: formatNum(latest.humidity, '%', 0) },
+    { label: 'Tlak', short: 'Tlak', value: formatNum(latest.pressure, ' hPa', 0) },
+    { label: 'Padavine', short: 'Dež', value: formatNum(latest.precipTotal, ' mm', 1) },
+    { label: 'Sunek', short: 'Sunek', value: formatNum(latest.windGust, ' m/s', 1) },
+    { label: 'UV', short: 'UV', value: formatNum(latest.uv, '', 0) },
+    { label: 'Sončno', short: 'Sonce', value: formatNum(latest.solar, ' W/m²', 0) },
   ];
-
-  const icons = {
-    Vlažnost: '💧',
-    Veter: '💨',
-    Sunek: '🌬️',
-    Tlak: '📊',
-    Padavine: '🌧️',
-    Intenzivnost: '☔',
-    UV: '☀️',
-    Sončno: '🔆',
-    Rosišče: '🌫️',
-  };
 
   grid.innerHTML = items
     .map(
       (m) => `
-    <article class="metric">
-      <span class="metric__icon" aria-hidden="true">${icons[m.label] || '·'}</span>
-      <span class="metric__label">${m.label}</span>
-      <span class="metric__value">${m.value}</span>
-    </article>`,
+    <div class="now-stat">
+      <span class="now-stat__lbl">${m.short}</span>
+      <span class="now-stat__val">${m.value}</span>
+    </div>`,
     )
     .join('');
 }
@@ -97,26 +79,29 @@ function renderHero(latest, summary) {
   const kind = weatherKind(latest);
   $('#weather-icon').textContent = weatherIcon(kind);
   $('#temp-main').textContent = temp != null ? temp.toFixed(1) : '—';
-  $('#temp-unit').textContent = '°C';
-  $('#hero-sub').textContent = latest
-    ? `Zadnja meritev · ${formatTime(latest.time, {
-        weekday: 'short',
+
+  const timeStr = latest
+    ? formatTime(latest.time, {
         day: 'numeric',
         month: 'short',
         hour: '2-digit',
         minute: '2-digit',
-      })}`
-  : 'Ni podatkov';
+      })
+    : '—';
+  $('#hero-sub').textContent = latest ? timeStr : 'Ni podatkov';
 
   const min = summary?.min;
   const max = summary?.max;
   $('#day-range').innerHTML =
     min != null && max != null
-      ? `<span class="hero__chip hero__chip--cold">↓ ${formatTemp(min, 1)}</span><span class="hero__chip hero__chip--hot">↑ ${formatTemp(max, 1)}</span>`
+      ? `<span class="now-ext now-ext--cold">${formatTemp(min, 0)}</span><span class="now-ext now-ext--hot">${formatTemp(max, 0)}</span>`
       : '';
 
   updateWindCompass(latest?.windDir);
-  $('#wind-speed').textContent = formatNum(latest?.windSpeed, ' m/s');
+  const dir = windLabel(latest?.windDir);
+  const spd = formatNum(latest?.windSpeed, ' m/s', 1);
+  $('#wind-dir-label').textContent = dir;
+  $('#wind-speed').textContent = spd !== '—' ? spd : '—';
 }
 
 function renderCharts(readings) {
