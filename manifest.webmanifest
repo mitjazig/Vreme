@@ -1,0 +1,33 @@
+{
+  "id": "/",
+  "name": "Vreme Koper – IKOPER43",
+  "short_name": "Vreme Koper",
+  "description": "Vremenska postaja IKOPER43, Koper",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#070f1a",
+  "theme_color": "#070f1a",
+  "orientation": "portrait-primary",
+  "lang": "sl",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
