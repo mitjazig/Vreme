@@ -162,15 +162,11 @@ async function loadPeriod() {
   setStatus('Nalagam statistiko…');
 
   try {
-    let readings, initialPrecipTotal;
-    if (isYear) {
-      readings = await fetchYearReadings(year);
-      initialPrecipTotal = null;
-    } else {
-      ({ readings, initialPrecipTotal } = await fetchMonthReadings(year, Number(monthVal)));
-    }
+    const readings = isYear
+      ? await fetchYearReadings(year)
+      : await fetchMonthReadings(year, Number(monthVal));
 
-    const daily = aggregateByDay(readings, initialPrecipTotal);
+    const daily = aggregateByDay(readings);
     const summary = monthSummary(daily);
 
     const monthName = isYear ? String(year) : MONTHS_SL[Number(monthVal) - 1];
