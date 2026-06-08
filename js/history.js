@@ -66,15 +66,23 @@ function populateFilters() {
   monthSel.value = String(now.getMonth() + 1);
 }
 
+function fmtDateTime(dt) {
+  if (!dt) return null;
+  return dt.toLocaleDateString('sl-SI', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Ljubljana' });
+}
+
 function renderSummary(summary, label) {
   const el = $('#period-summary');
   if (!el) return;
+  const minDt = fmtDateTime(summary.minTime);
+  const maxDt = fmtDateTime(summary.maxTime);
   el.innerHTML = `
     <p class="summary-strip__label">${label}</p>
     <div class="stat-pills">
       <div class="stat-pill stat-pill--cold">
         <span class="stat-pill__lbl">Min</span>
         <span class="stat-pill__val">${formatTemp(summary.min)}</span>
+        ${minDt ? `<span class="stat-pill__dt">${minDt}</span>` : ''}
       </div>
       <div class="stat-pill stat-pill--warm">
         <span class="stat-pill__lbl">Povpr.</span>
@@ -83,6 +91,7 @@ function renderSummary(summary, label) {
       <div class="stat-pill stat-pill--hot">
         <span class="stat-pill__lbl">Max</span>
         <span class="stat-pill__val">${formatTemp(summary.max)}</span>
+        ${maxDt ? `<span class="stat-pill__dt">${maxDt}</span>` : ''}
       </div>
       <div class="stat-pill stat-pill--rain">
         <span class="stat-pill__lbl">Dež</span>
