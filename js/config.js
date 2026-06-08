@@ -1,5 +1,5 @@
 /** Povečaj ob večjih popravkih – počisti star predpomnilnik v brskalniku */
-export const APP_VERSION = '9';
+export const APP_VERSION = '11';
 
 /** Google Sheets – javno dostopen list (Kdorkoli s povezavo / objavljen na spletu). */
 export const SHEET = {

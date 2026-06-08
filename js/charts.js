@@ -4,6 +4,8 @@ let hourlyChart;
 let dailyChart;
 
 export function renderHourlyChart(canvas, readings, formatTime) {
+  if (!canvas || typeof Chart === 'undefined') return;
+
   const labels = readings.map((r) =>
     formatTime(r.time, { hour: '2-digit', minute: '2-digit' }),
   );
@@ -58,6 +60,8 @@ export function renderHourlyChart(canvas, readings, formatTime) {
 }
 
 export function renderDailyChart(canvas, daily) {
+  if (!canvas || typeof Chart === 'undefined') return;
+
   if (dailyChart) dailyChart.destroy();
 
   dailyChart = new Chart(canvas, {

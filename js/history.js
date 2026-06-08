@@ -1,4 +1,5 @@
 import { APP_VERSION } from './config.js';
+import { initPwaUpdates } from './pwa-update.js';
 import { fetchDataBounds, fetchMonthReadings, fetchYearReadings } from './sheets.js';
 import {
   aggregateByDay,
@@ -161,11 +162,15 @@ async function loadPeriod() {
   setStatus('Nalagam statistiko…');
 
   try {
-    const readings = isYear
-      ? await fetchYearReadings(year)
-      : await fetchMonthReadings(year, Number(monthVal));
+    let readings, initialPrecipTotal;
+    if (isYear) {
+      readings = await fetchYearReadings(year);
+      initialPrecipTotal = null;
+    } else {
+      ({ readings, initialPrecipTotal } = await fetchMonthReadings(year, Number(monthVal)));
+    }
 
-    const daily = aggregateByDay(readings);
+    const daily = aggregateByDay(readings, initialPrecipTotal);
     const summary = monthSummary(daily);
 
     const monthName = isYear ? String(year) : MONTHS_SL[Number(monthVal) - 1];
@@ -182,7 +187,8 @@ async function loadPeriod() {
     console.error(err);
     setStatus(`Napaka: ${err.message}`, true);
     renderTable([]);
-    $('#period-summary').innerHTML = '';
+    const summary = $('#period-summary');
+    if (summary) summary.innerHTML = '';
     destroyHistoryCharts();
   } finally {
     setLoading(false);
@@ -206,6 +212,7 @@ async function init() {
   }
 
   await clearStaleCaches();
+  initPwaUpdates();
 
   $$('.view-toggle__btn').forEach((btn) => {
     btn.addEventListener('click', () => {

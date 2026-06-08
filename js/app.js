@@ -1,5 +1,6 @@
 import { REFRESH_MS, APP_VERSION } from './config.js';
 import { setupInstallUI } from './install-ui.js';
+import { initPwaUpdates } from './pwa-update.js';
 import { loadWeatherBundle } from './sheets.js';
 import { renderHourlyChart, renderDailyChart } from './charts.js';
 import {
@@ -14,6 +15,16 @@ import {
 } from './weather-ui.js';
 
 const $ = (sel) => document.querySelector(sel);
+
+function setText(sel, text) {
+  const el = $(sel);
+  if (el) el.textContent = text;
+}
+
+function setHtml(sel, html) {
+  const el = $(sel);
+  if (el) el.innerHTML = html;
+}
 
 const CACHE_KEY = 'vreme-pwa-cache-v1';
 
@@ -76,9 +87,8 @@ function renderMetrics(latest) {
 
 function renderHero(latest, summary) {
   const temp = latest?.temp ?? summary?.current;
-  const kind = weatherKind(latest);
-  $('#weather-icon').textContent = weatherIcon(kind);
-  $('#temp-main').textContent = temp != null ? temp.toFixed(1) : '—';
+  setText('#weather-icon', weatherIcon(weatherKind(latest)));
+  setText('#temp-main', temp != null ? temp.toFixed(1) : '—');
 
   const timeStr = latest
     ? formatTime(latest.time, {
@@ -87,21 +97,22 @@ function renderHero(latest, summary) {
         hour: '2-digit',
         minute: '2-digit',
       })
-    : '—';
-  $('#hero-sub').textContent = latest ? timeStr : 'Ni podatkov';
+    : 'Ni podatkov';
+  setText('#hero-sub', timeStr);
 
   const min = summary?.min;
   const max = summary?.max;
-  $('#day-range').innerHTML =
+  setHtml(
+    '#day-range',
     min != null && max != null
       ? `<span class="now-ext now-ext--cold">${formatTemp(min, 0)}</span><span class="now-ext now-ext--hot">${formatTemp(max, 0)}</span>`
-      : '';
+      : '',
+  );
 
   updateWindCompass(latest?.windDir);
-  const dir = windLabel(latest?.windDir);
+  setText('#wind-dir-label', windLabel(latest?.windDir));
   const spd = formatNum(latest?.windSpeed, ' m/s', 1);
-  $('#wind-dir-label').textContent = dir;
-  $('#wind-speed').textContent = spd !== '—' ? spd : '—';
+  setText('#wind-speed', spd !== '—' ? spd : '—');
 }
 
 function renderCharts(readings) {
@@ -110,8 +121,10 @@ function renderCharts(readings) {
   }
   const h24 = last24h(readings);
   const daily = dailyStats(readings);
-  renderHourlyChart($('#chart-hourly'), h24, formatTime);
-  renderDailyChart($('#chart-daily'), daily, formatTime);
+  const hourly = $('#chart-hourly');
+  const dailyCanvas = $('#chart-daily');
+  if (hourly) renderHourlyChart(hourly, h24, formatTime);
+  if (dailyCanvas) renderDailyChart(dailyCanvas, daily);
 }
 
 function renderAll(bundle, fromCache = false) {
@@ -215,24 +228,6 @@ async function refresh() {
   }
 }
 
-function registerServiceWorker() {
-  if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker
-    .register('./sw.js')
-    .then((reg) => {
-      reg.update();
-      reg.addEventListener('updatefound', () => {
-        const worker = reg.installing;
-        worker?.addEventListener('statechange', () => {
-          if (worker.state === 'activated' && navigator.serviceWorker.controller) {
-            window.location.reload();
-          }
-        });
-      });
-    })
-    .catch(console.warn);
-}
-
 async function init() {
   if (location.protocol === 'file:') {
     setStatus(
@@ -243,7 +238,7 @@ async function init() {
   }
 
   await clearStaleCaches();
-  registerServiceWorker();
+  initPwaUpdates();
   setupInstallUI();
   $('#btn-refresh')?.addEventListener('click', refresh);
 
