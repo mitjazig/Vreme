@@ -56,12 +56,14 @@
         </div>
       </section>
 
-      <section id="period-summary" class="summary-strip" aria-live="polite"></section>
+      <section id="period-summary" class="card summary-card" aria-live="polite"></section>
 
       <div id="charts-daily" class="charts-stack">
         <section class="card chart-card">
           <div class="card__head">
-            <span class="card__icon card__icon--warm" aria-hidden="true">▤</span>
+            <span class="card__icon card__icon--warm" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>
+            </span>
             <div>
               <h2 class="card__title">Temperaturni razpon</h2>
               <p class="card__desc">Dnevni minimum in maksimum</p>
@@ -74,7 +76,9 @@
 
         <section class="card chart-card">
           <div class="card__head">
-            <span class="card__icon card__icon--warm" aria-hidden="true">〰</span>
+            <span class="card__icon card__icon--warm" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 8 11 13 14 21 6"/><line x1="3" y1="21" x2="21" y2="21"/></svg>
+            </span>
             <div>
               <h2 class="card__title">Temperatura</h2>
               <p class="card__desc">Povprečje z min in max</p>
@@ -87,7 +91,9 @@
 
         <section class="card chart-card">
           <div class="card__head">
-            <span class="card__icon card__icon--rain" aria-hidden="true">♦</span>
+            <span class="card__icon card__icon--rain" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c0 0-7 8-7 13a7 7 0 0 0 14 0c0-5-7-13-7-13z"/></svg>
+            </span>
             <div>
               <h2 class="card__title">Padavine</h2>
               <p class="card__desc">Dnevna količina dežja</p>
@@ -102,7 +108,9 @@
       <div id="charts-hourly" class="charts-stack hidden">
         <section class="card chart-card">
           <div class="card__head">
-            <span class="card__icon card__icon--warm" aria-hidden="true">◷</span>
+            <span class="card__icon card__icon--warm" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            </span>
             <div>
               <h2 id="chart-hourly-title" class="card__title">Urne temperature</h2>
               <p class="card__desc">Vsaka ura v mesecu</p>
@@ -116,7 +124,9 @@
 
       <section class="card table-card">
         <div class="card__head">
-          <span class="card__icon" aria-hidden="true">≡</span>
+          <span class="card__icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </span>
           <div>
             <h2 class="card__title">Dnevni pregled</h2>
             <p class="card__desc">Podrobna tabela</p>
