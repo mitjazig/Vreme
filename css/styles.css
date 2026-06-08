@@ -243,6 +243,46 @@ body {
   -webkit-text-fill-color: var(--muted);
 }
 
+/* Trend puščica */
+.now-panel__trend {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-top: 0.2rem;
+  margin-left: 0.1rem;
+  -webkit-text-fill-color: initial;
+  line-height: 1;
+}
+.trend--up   { color: #f43f5e; }
+.trend--down { color: #38bdf8; }
+.trend--flat { color: var(--muted); }
+
+/* Občutek temperature */
+.now-panel__feel {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15em 0.5em;
+  border-radius: 5px;
+  margin: 0.25rem 0 0;
+}
+.feel--freeze   { background: rgba(56,189,248,0.2);  color: #7dd3fc; }
+.feel--cold     { background: rgba(56,189,248,0.15); color: #38bdf8; }
+.feel--cool     { background: rgba(99,179,237,0.12); color: #93c5fd; }
+.feel--nice     { background: rgba(52,211,153,0.15); color: #34d399; }
+.feel--warm     { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.feel--hot      { background: rgba(244,63,94,0.15);  color: #f43f5e; }
+.feel--scorching{ background: rgba(244,63,94,0.25);  color: #fb7185; }
+
+/* Zadnji dež – manjši tekst v metrics celici */
+.now-stat__sub {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 0.1rem;
+  line-height: 1.2;
+}
+
 .now-panel__time {
   margin: 0.2rem 0 0;
   font-size: 0.75rem;
@@ -382,6 +422,314 @@ body {
 /* —— Charts —— */
 .chart-card {
   padding-bottom: 0.85rem;
+}
+
+/* —— Alarmi —— */
+#alerts-container {
+  max-width: 540px;
+  margin: 0 auto;
+  padding: 0 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.alert-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid currentColor;
+  font-size: 0.82rem;
+}
+
+.alert-banner__icon { font-size: 1rem; flex-shrink: 0; line-height: 1.4; }
+.alert-banner__body { display: flex; flex-direction: column; gap: 0.1rem; }
+.alert-banner__body strong { font-weight: 700; }
+
+.alert--yellow  { background: rgba(234,179,8,0.12);  color: #fcd34d; }
+.alert--orange  { background: rgba(249,115,22,0.12); color: #fb923c; }
+.alert--red     { background: rgba(244,63,94,0.15);  color: #f43f5e; }
+.alert--violet  { background: rgba(167,139,250,0.15);color: #a78bfa; }
+
+/* —— 7-dnevna napoved —— */
+.forecast-card { padding-bottom: 1rem; }
+
+.forecast-scroll {
+  display: flex;
+  overflow-x: auto;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem 0.25rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.forecast-scroll::-webkit-scrollbar { display: none; }
+
+.forecast-loading {
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding: 0.5rem 1rem;
+  margin: 0;
+}
+
+.forecast-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 60px;
+  padding: 0.6rem 0.4rem;
+  border-radius: var(--radius-sm);
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--card-border);
+  flex-shrink: 0;
+}
+
+.forecast-day__lbl {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.forecast-day__icon { font-size: 1.5rem; line-height: 1; }
+
+.forecast-day__temps {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  line-height: 1.2;
+}
+
+.forecast-day__max {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--hot);
+}
+
+.forecast-day__min {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--cold);
+}
+
+.forecast-day__rain {
+  font-size: 0.65rem;
+  color: var(--rain);
+  font-weight: 600;
+}
+
+.forecast-day__rain--none { color: var(--muted); }
+
+/* —— Radar —— */
+.radar-card { padding-bottom: 0.85rem; }
+
+/* —— Temperatura morja —— */
+.sea-card { padding-bottom: 1rem; }
+
+.sea-content { padding: 0.75rem 1rem 0; }
+
+.sea-current {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.sea-current__val {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #38bdf8;
+  letter-spacing: -0.02em;
+}
+
+.sea-current__lbl {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.sea-week {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 0.25rem;
+}
+.sea-week::-webkit-scrollbar { display: none; }
+
+.sea-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 52px;
+  padding: 0.45rem 0.3rem;
+  border-radius: var(--radius-sm);
+  background: rgba(56,189,248,0.07);
+  border: 1px solid rgba(56,189,248,0.15);
+  flex-shrink: 0;
+}
+
+.sea-day__lbl {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sea-day__val {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+/* —— Radar zemljevid —— */
+.radar-map-wrap {
+  padding: 0.5rem 0.75rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.radar-map {
+  width: 100%;
+  height: 300px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0f1c2e;
+  z-index: 0;
+}
+
+.radar-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.radar-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent-dim);
+  color: var(--accent);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.radar-btn:active { transform: scale(0.94); }
+
+.radar-timeline {
+  flex: 1;
+  height: 4px;
+  background: rgba(148,163,184,0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.radar-timeline__bar {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.radar-time {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+.radar-time--forecast { color: var(--rain); }
+
+.radar-updated {
+  margin: 0;
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* —— Urna napoved —— */
+.forecast-hourly-wrap { padding: 0 0 0.5rem; }
+
+.hourly-scroll {
+  display: flex;
+  flex-direction: column;
+  max-height: 380px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--card-border) transparent;
+}
+
+.hourly-day-sep {
+  padding: 0.5rem 1rem 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(56,189,248,0.05);
+  border-top: 1px solid var(--card-border);
+}
+
+.hourly-item {
+  display: grid;
+  grid-template-columns: 3rem 1.6rem 2.5rem 3rem 2rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 1rem;
+  border-bottom: 1px solid rgba(148,163,184,0.05);
+  font-variant-numeric: tabular-nums;
+}
+
+.hourly-item:last-child { border-bottom: none; }
+
+.hourly-item__time {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.hourly-item__icon { font-size: 1.1rem; text-align: center; }
+
+.hourly-item__temp {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.hourly-item__rain {
+  font-size: 0.78rem;
+  color: var(--rain);
+  font-weight: 600;
+}
+
+.hourly-item__rain--none { color: var(--muted); }
+
+.hourly-item__unit {
+  font-size: 0.6rem;
+  font-weight: 400;
+  margin-left: 0.1em;
+}
+
+.hourly-item__prob {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.forecast-day__prob {
+  font-size: 0.6rem;
+  color: var(--muted);
+  font-weight: 400;
 }
 
 /* Hero card – prvi graf na glavni strani */

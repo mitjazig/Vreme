@@ -45,6 +45,8 @@
 
     <p id="status" class="status" role="status">Nalagam podatke…</p>
 
+    <div id="alerts-container" aria-live="polite"></div>
+
     <main class="main">
       <section class="card now-panel" aria-label="Trenutno vreme">
         <div class="now-panel__top">
@@ -52,8 +54,10 @@
           <div class="now-panel__main">
             <div class="now-panel__temp">
               <span id="temp-main">—</span><span class="now-panel__unit">°C</span>
+              <span id="temp-trend" class="now-panel__trend" aria-hidden="true"></span>
             </div>
             <p id="hero-sub" class="now-panel__time">—</p>
+            <p id="temp-feel" class="now-panel__feel"></p>
           </div>
           <div id="day-range" class="now-panel__extremes"></div>
         </div>
@@ -116,6 +120,7 @@
           <p class="chart-empty hidden">Ni padavin v zadnjih 24 urah</p>
         </div>
       </section>
+
     </main>
 
     <footer class="footer">
@@ -129,6 +134,13 @@
           <path d="M12 3v9m0 0 7.5-4.5M12 12 4.5 7.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
         </svg>
         Zdaj
+      </a>
+      <a href="./forecast.html" class="bottom-nav__link">
+        <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M2 12h2M20 12h2M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          <circle cx="12" cy="12" r="4"/>
+        </svg>
+        Napoved
       </a>
       <a href="./history.html" class="bottom-nav__link">
         <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
