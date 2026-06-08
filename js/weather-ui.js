@@ -139,7 +139,13 @@ export function dailyStats(readings) {
   for (const r of readings) {
     if (!r.time || r.temp == null) continue;
     const key = dayKey(r.time);
-    const cur = byDay.get(key) || { min: r.temp, max: r.temp, label: key };
+    const label = r.time.toLocaleDateString('sl-SI', {
+      timeZone: 'Europe/Ljubljana',
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+    const cur = byDay.get(key) || { min: r.temp, max: r.temp, label };
     cur.min = Math.min(cur.min, r.temp);
     cur.max = Math.max(cur.max, r.temp);
     byDay.set(key, cur);
