@@ -57,7 +57,7 @@ export function dayKey(date) {
 }
 
 /** Dnevna agregacija za zgodovino */
-export function aggregateByDay(readings, initialPrecipTotal = null) {
+export function aggregateByDay(readings) {
   const days = new Map();
 
   for (const r of readings) {
@@ -86,30 +86,21 @@ export function aggregateByDay(readings, initialPrecipTotal = null) {
   }
 
   const sorted = [...days.values()].sort((a, b) => a.date - b.date);
-  let prevPrecip = initialPrecipTotal;
 
-  return sorted.map((d) => {
-    const rain =
-      d.precipTotal != null && prevPrecip != null
-        ? Math.max(0, d.precipTotal - prevPrecip)
-        : null;
-    if (d.precipTotal != null) prevPrecip = d.precipTotal;
+  const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
 
-    const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
-
-    return {
-      key: d.key,
-      date: d.date,
-      min: d.temps.length ? Math.min(...d.temps) : null,
-      max: d.temps.length ? Math.max(...d.temps) : null,
-      avg: avg(d.temps),
-      humidity: avg(d.humidity),
-      windMax: d.windGust.length ? Math.max(...d.windGust) : null,
-      windAvg: avg(d.windSpeed),
-      rain,
-      precipTotal: d.precipTotal,
-    };
-  });
+  return sorted.map((d) => ({
+    key: d.key,
+    date: d.date,
+    min: d.temps.length ? Math.min(...d.temps) : null,
+    max: d.temps.length ? Math.max(...d.temps) : null,
+    avg: avg(d.temps),
+    humidity: avg(d.humidity),
+    windMax: d.windGust.length ? Math.max(...d.windGust) : null,
+    windAvg: avg(d.windSpeed),
+    rain: d.precipTotal,
+    precipTotal: d.precipTotal,
+  }));
 }
 
 export function monthSummary(daily) {
