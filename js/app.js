@@ -85,7 +85,20 @@ function renderMetrics(latest) {
     .join('');
 }
 
-function renderHero(latest, summary) {
+function todayMinMax(readings) {
+  if (!readings?.length) return { min: null, max: null };
+  const todayKey = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Ljubljana' }).format(new Date());
+  const todayReadings = readings.filter((r) => {
+    if (!r.time || r.temp == null) return false;
+    const k = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Ljubljana' }).format(r.time);
+    return k === todayKey;
+  });
+  if (!todayReadings.length) return { min: null, max: null };
+  const temps = todayReadings.map((r) => r.temp);
+  return { min: Math.min(...temps), max: Math.max(...temps) };
+}
+
+function renderHero(latest, summary, readings) {
   const temp = latest?.temp ?? summary?.current;
   setText('#weather-icon', weatherIcon(weatherKind(latest)));
   setText('#temp-main', temp != null ? temp.toFixed(1) : '—');
@@ -100,8 +113,7 @@ function renderHero(latest, summary) {
     : 'Ni podatkov';
   setText('#hero-sub', timeStr);
 
-  const min = summary?.min;
-  const max = summary?.max;
+  const { min, max } = todayMinMax(readings);
   setHtml(
     '#day-range',
     min != null && max != null
@@ -132,7 +144,7 @@ function renderCharts(readings) {
 function renderAll(bundle, fromCache = false) {
   const { readings, latest, summary, fetchedAt } = bundle;
 
-  renderHero(latest, summary);
+  renderHero(latest, summary, readings);
   renderMetrics(latest);
 
   let chartError = null;

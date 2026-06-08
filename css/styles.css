@@ -11,7 +11,7 @@
   --warm: #f59e0b;
   --warm-glow: rgba(245, 158, 11, 0.25);
   --cold: #38bdf8;
-  --hot: #fb923c;
+  --hot: #f43f5e;
   --rain: #34d399;
   --radius: 18px;
   --radius-sm: 12px;
@@ -653,7 +653,7 @@ body.is-loading .now-panel__temp span:first-child {
   margin-left: 0.25em;
   vertical-align: middle;
 }
-.diff-badge--up   { background: rgba(251, 146, 60, 0.18); color: #fb923c; }
+.diff-badge--up   { background: rgba(244, 63, 94, 0.15); color: #f43f5e; }
 .diff-badge--down { background: rgba(56, 189, 248, 0.18); color: #38bdf8; }
 
 /* Napis primerjave nad piluli */

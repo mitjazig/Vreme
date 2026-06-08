@@ -24,6 +24,16 @@ export function renderTempRangeChart(canvas, daily) {
   if (!canvas || typeof Chart === 'undefined') return;
   destroy('range');
 
+  // Barvanje: hladno (modro) → toplo (zlato) → vroče (rdeče) glede na max temp dneva
+  const barColors = daily.map((d) => {
+    const t = d.max ?? d.min ?? 15;
+    if (t <= 5)  return 'rgba(56,189,248,0.55)';
+    if (t <= 15) return 'rgba(99,179,237,0.55)';
+    if (t <= 22) return 'rgba(245,158,11,0.55)';
+    if (t <= 28) return 'rgba(251,113,60,0.55)';
+    return 'rgba(244,63,94,0.65)';
+  });
+
   charts.range = new Chart(canvas, {
     type: 'bar',
     data: {
@@ -32,8 +42,8 @@ export function renderTempRangeChart(canvas, daily) {
         {
           label: 'Min – max °C',
           data: daily.map((d) => [d.min, d.max]),
-          backgroundColor: CHART.tempLight,
-          borderColor: CHART.temp,
+          backgroundColor: barColors,
+          borderColor: barColors.map((c) => c.replace(/[\d.]+\)$/, '0.9)')),
           borderWidth: 1,
           borderRadius: 6,
           borderSkipped: false,
@@ -96,7 +106,7 @@ export function renderTempAvgChart(canvas, daily) {
         {
           label: 'Max °C',
           data: daily.map((d) => d.max),
-          borderColor: '#fb923c',
+          borderColor: '#f43f5e',
           borderDash: [5, 5],
           tension: 0.35,
           pointRadius: 0,
