@@ -1,4 +1,4 @@
-const CACHE = 'vreme-pwa-static-v9';
+const CACHE = 'vreme-pwa-static-v11';
 
 const ASSETS = [
   './',
@@ -13,6 +13,7 @@ const ASSETS = [
   './js/charts.js',
   './js/history-charts.js',
   './js/install-ui.js',
+  './js/pwa-update.js',
   './js/app.js',
   './js/history.js',
   './manifest.webmanifest',
@@ -21,6 +22,10 @@ const ASSETS = [
   './icons/icon-192.svg',
   './icons/icon-512.svg',
 ];
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -42,7 +47,7 @@ self.addEventListener('activate', (event) => {
 
 function isAppAsset(url) {
   if (url.origin !== self.location.origin) return false;
-  return /\.(html|js|css|webmanifest|svg)$/.test(url.pathname) || url.pathname.endsWith('/');
+  return /\.(html|js|css|webmanifest|svg|png)$/.test(url.pathname) || url.pathname.endsWith('/');
 }
 
 async function networkFirst(request) {

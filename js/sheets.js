@@ -161,9 +161,30 @@ export async function fetchReadingsRange(start, end, year) {
   return rows.map(normalizeReading).filter((r) => r.time);
 }
 
+async function fetchPrecipTotalBefore(date, year) {
+  const sheet = sheetForYear(year);
+  const q = [
+    'select Q',
+    `where C < ${dateQueryLiteral(date)} and Q is not null`,
+    'order by C desc limit 1',
+  ].join(' ');
+  try {
+    const rows = await fetchGviz({ sheet, query: q });
+    const row = rows[0] ?? {};
+    const v = num(Object.values(row).find((x) => x != null) ?? null);
+    return v;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchMonthReadings(year, month) {
   const { start, end } = monthRange(year, month);
-  return fetchReadingsRange(start, end, year);
+  const [readings, initialPrecipTotal] = await Promise.all([
+    fetchReadingsRange(start, end, year),
+    fetchPrecipTotalBefore(start, year),
+  ]);
+  return { readings, initialPrecipTotal };
 }
 
 export async function fetchYearReadings(year) {

@@ -57,7 +57,7 @@ export function dayKey(date) {
 }
 
 /** Dnevna agregacija za zgodovino */
-export function aggregateByDay(readings) {
+export function aggregateByDay(readings, initialPrecipTotal = null) {
   const days = new Map();
 
   for (const r of readings) {
@@ -86,7 +86,7 @@ export function aggregateByDay(readings) {
   }
 
   const sorted = [...days.values()].sort((a, b) => a.date - b.date);
-  let prevPrecip = null;
+  let prevPrecip = initialPrecipTotal;
 
   return sorted.map((d) => {
     const rain =

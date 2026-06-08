@@ -660,6 +660,38 @@ body.is-loading .stat-pill {
   opacity: 0.55;
 }
 
+/* —— Posodobitev PWA —— */
+.update-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.55rem 1rem;
+  padding-top: calc(0.55rem + env(safe-area-inset-top, 0px));
+  background: rgba(56, 189, 248, 0.95);
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.update-banner button {
+  border: none;
+  background: #0f172a;
+  color: #f1f5f9;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
 /* —— Namestitev PWA —— */
 .install-modal {
   position: fixed;
