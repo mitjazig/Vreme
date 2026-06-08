@@ -2,7 +2,7 @@ import { REFRESH_MS, APP_VERSION } from './config.js';
 import { setupInstallUI } from './install-ui.js';
 import { initPwaUpdates } from './pwa-update.js';
 import { loadWeatherBundle } from './sheets.js';
-import { renderHourlyChart, renderDailyChart } from './charts.js';
+import { renderHourlyChart, renderDailyChart, renderPrecipChart24h } from './charts.js';
 import {
   windLabel,
   weatherKind,
@@ -123,8 +123,10 @@ function renderCharts(readings) {
   const daily = dailyStats(readings);
   const hourly = $('#chart-hourly');
   const dailyCanvas = $('#chart-daily');
+  const precipCanvas = $('#chart-precip-24h');
   if (hourly) renderHourlyChart(hourly, h24, formatTime);
   if (dailyCanvas) renderDailyChart(dailyCanvas, daily);
+  if (precipCanvas) renderPrecipChart24h(precipCanvas, h24, formatTime);
 }
 
 function renderAll(bundle, fromCache = false) {
