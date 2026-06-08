@@ -93,6 +93,9 @@ export function renderDailyChart(canvas, daily) {
 export function renderPrecipChart24h(canvas, readings, formatTime) {
   if (!canvas || typeof Chart === 'undefined') return;
 
+  const emptyMsg = canvas.parentElement?.querySelector('.chart-empty');
+  const showEmpty = (on) => emptyMsg?.classList.toggle('hidden', !on);
+
   // Združimo padavine po urah – vzamemo zadnjo vrednost precipTotal vsake ure
   // in iz razlike izračunamo koliko je padlo v tisti uri
   const byHour = new Map();
@@ -110,8 +113,14 @@ export function renderPrecipChart24h(canvas, readings, formatTime) {
     formatTime(r.time, { hour: '2-digit', minute: '2-digit' }),
   );
 
-  // precipTotal se resetira ponoči – vzamemo direktne vrednosti, kjer gre navzgor
   const data = sorted.map((r) => r.precipTotal ?? 0);
+  const hasRain = data.some((v) => v > 0);
+
+  showEmpty(!hasRain);
+  if (!hasRain) {
+    if (precipChart) { precipChart.destroy(); precipChart = null; }
+    return;
+  }
 
   if (precipChart) precipChart.destroy();
 
