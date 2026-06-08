@@ -74,10 +74,16 @@ export function aggregateByDay(readings) {
         windSpeed: [],
         precipTotal: null,
         solar: [],
+        minTemp: null, minTime: null,
+        maxTemp: null, maxTime: null,
       };
       days.set(key, d);
     }
-    if (r.temp != null) d.temps.push(r.temp);
+    if (r.temp != null) {
+      d.temps.push(r.temp);
+      if (d.minTemp == null || r.temp < d.minTemp) { d.minTemp = r.temp; d.minTime = r.time; }
+      if (d.maxTemp == null || r.temp > d.maxTemp) { d.maxTemp = r.temp; d.maxTime = r.time; }
+    }
     if (r.humidity != null) d.humidity.push(r.humidity);
     if (r.windGust != null) d.windGust.push(r.windGust);
     if (r.windSpeed != null) d.windSpeed.push(r.windSpeed);
@@ -92,8 +98,10 @@ export function aggregateByDay(readings) {
   return sorted.map((d) => ({
     key: d.key,
     date: d.date,
-    min: d.temps.length ? Math.min(...d.temps) : null,
-    max: d.temps.length ? Math.max(...d.temps) : null,
+    min: d.minTemp,
+    minTime: d.minTime,
+    max: d.maxTemp,
+    maxTime: d.maxTime,
     avg: avg(d.temps),
     humidity: avg(d.humidity),
     windMax: d.windGust.length ? Math.max(...d.windGust) : null,
@@ -104,12 +112,20 @@ export function aggregateByDay(readings) {
 }
 
 export function monthSummary(daily) {
-  const temps = daily.flatMap((d) => [d.min, d.max].filter((v) => v != null));
   const rains = daily.map((d) => d.rain).filter((v) => v != null);
+
+  let minVal = null, minTime = null, maxVal = null, maxTime = null;
+  for (const d of daily) {
+    if (d.min != null && (minVal == null || d.min < minVal)) { minVal = d.min; minTime = d.minTime; }
+    if (d.max != null && (maxVal == null || d.max > maxVal)) { maxVal = d.max; maxTime = d.maxTime; }
+  }
+
   return {
     days: daily.length,
-    min: temps.length ? Math.min(...temps) : null,
-    max: temps.length ? Math.max(...temps) : null,
+    min: minVal,
+    minTime,
+    max: maxVal,
+    maxTime,
     avg: daily.filter((d) => d.avg != null).length
       ? daily.reduce((s, d) => s + d.avg, 0) / daily.filter((d) => d.avg != null).length
       : null,

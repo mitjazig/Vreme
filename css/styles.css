@@ -591,6 +591,14 @@ body.is-loading .now-panel__temp span:first-child {
 .stat-pill--hot .stat-pill__val { color: var(--hot); }
 .stat-pill--rain .stat-pill__val { color: var(--rain); }
 
+.stat-pill__dt {
+  display: block;
+  font-size: 0.65rem;
+  opacity: 0.65;
+  margin-top: 0.15rem;
+  line-height: 1.2;
+}
+
 .table-card {
   padding-bottom: 0.75rem;
 }
