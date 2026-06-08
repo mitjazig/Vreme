@@ -660,6 +660,24 @@ body {
   text-align: right;
 }
 
+/* ARSO radar GIF */
+.radar-wrap {
+  padding: 0.5rem 0.75rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.radar-img {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0f1c2e;
+}
+
 /* —— Urna napoved —— */
 .forecast-hourly-wrap { padding: 0 0 0.5rem; }
 
