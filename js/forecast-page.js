@@ -1,5 +1,7 @@
 import { initPwaUpdates } from './pwa-update.js';
 import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides } from './forecast.js';
+import { moonPhase, STATION_LAT, STATION_LON } from './astro.js';
+import { LightningTracker } from './lightning.js';
 import { fetchAlerts, alertCls, alertLabel } from './alerts.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -108,6 +110,32 @@ function renderSeaTemp(sea) {
     </div>`;
 }
 
+/** —— Lunina faza (pill za vgraditev) —— */
+function renderMoonPill() {
+  const m = moonPhase();
+  const fmtDate = (d) => d.toLocaleDateString('sl-SI', {
+    timeZone: 'Europe/Ljubljana', day: 'numeric', month: 'short',
+  });
+
+  const effect = m.tideEffect === 'spring'
+    ? '<span class="moon-tide moon-tide--spring">☊ Pomladna plima</span>'
+    : m.tideEffect === 'neap'
+    ? '<span class="moon-tide moon-tide--neap">☋ Mrtvina</span>'
+    : '';
+
+  const nextEvent = m.daysToFull <= m.daysToNew
+    ? `Polna luna: ${fmtDate(m.nextFull)}`
+    : `Mlaj: ${fmtDate(m.nextNew)}`;
+
+  return `<div class="moon-forecast-pill">
+    <span class="moon-forecast-pill__icon">${m.emoji}</span>
+    <div class="moon-forecast-pill__body">
+      <span class="moon-forecast-pill__name">${m.name} · ${m.illum}%</span>
+      <span class="moon-forecast-pill__next">${nextEvent} ${effect}</span>
+    </div>
+  </div>`;
+}
+
 /** —— Plima / oseka —— */
 function renderTides() {
   const el = document.getElementById('tide-content');
@@ -182,7 +210,9 @@ function renderTides() {
         </div>`;
       }).join('')}
     </div>
-    <p class="tide-note">* Višine so relativne glede na povprečno gladino morja (MSL). Harmonični model – orientacijska vrednost.</p>`;
+    <p class="tide-note">* Višine so relativne glede na povprečno gladino morja (MSL). Harmonični model – orientacijska vrednost.</p>
+    ${renderMoonPill()}`;
+
 }
 
 /** —— Kakovost zraka —— */
@@ -343,6 +373,75 @@ function toggleRadarPlay() {
 
 
 
+/** —— Strele (Blitzortung) —— */
+let lightningTracker = null;
+
+function updateLightningUI() {
+  if (!lightningTracker) return;
+  const s = lightningTracker.stats();
+
+  // Status dot
+  const dot = document.getElementById('lightning-dot');
+  if (dot) {
+    dot.className = `lightning-dot ${s.connected ? 'lightning-dot--on' : 'lightning-dot--off'}`;
+    dot.title = s.connected ? 'Povezan' : 'Vzpostavljam povezavo…';
+  }
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('ls-5m',  s.total5);
+  set('ls-15m', s.total15);
+  set('ls-1h',  s.total60);
+
+  const nearEl = document.getElementById('ls-nearest');
+  const nearWrap = document.getElementById('ls-nearest-wrap');
+  if (s.nearest && nearEl) {
+    nearEl.textContent = `${s.nearest.km} km`;
+    const ageMin = Math.round((Date.now() - s.nearest.time) / 60_000);
+    nearEl.title = `pred ${ageMin} min`;
+    nearWrap?.classList.toggle('lightning-stat--danger', s.nearest.km < 20);
+  } else if (nearEl) {
+    nearEl.textContent = '—';
+    nearWrap?.classList.remove('lightning-stat--danger');
+  }
+
+  // Osveži barve markerjev vsakič
+  lightningTracker.refreshColors();
+}
+
+function initLightningMap() {
+  const mapEl = document.getElementById('lightning-map');
+  if (!mapEl || typeof L === 'undefined') return;
+
+  const lMap = L.map('lightning-map', { zoomControl: true, attributionControl: false })
+    .setView([46.0, 14.5], 6); // Slovenija v centru
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© CARTO',
+    subdomains: 'abcd',
+    maxZoom: 10,
+  }).addTo(lMap);
+
+  // Postaja
+  L.circleMarker([STATION_LAT, STATION_LON], {
+    radius: 5, fillColor: '#38bdf8', color: '#fff', weight: 2, fillOpacity: 1,
+  }).bindTooltip('IKOPER43 · Rakitovec', { permanent: false }).addTo(lMap);
+
+  // Krog 50 km od postaje
+  L.circle([STATION_LAT, STATION_LON], {
+    radius: 50_000,
+    color: 'rgba(56,189,248,0.25)',
+    fillColor: 'transparent',
+    weight: 1,
+    dashArray: '4,6',
+  }).addTo(lMap);
+
+  lightningTracker = new LightningTracker(lMap, updateLightningUI);
+  lightningTracker.connect();
+
+  // Osveži barve vsako minuto
+  setInterval(() => lightningTracker?.refreshColors(), 60_000);
+}
+
 async function load() {
   setStatus('Nalagam napoved…');
   try {
@@ -391,6 +490,9 @@ async function init() {
 
   await load();
   setInterval(load, 30 * 60 * 1000);
+
+  // Leaflet + Strele
+  initLightningMap();
 
   // Leaflet + RainViewer
   await initRadarMap();
