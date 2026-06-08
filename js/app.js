@@ -61,18 +61,95 @@ function updateWindCompass(deg) {
   if (needle) needle.style.transform = `rotate(${deg ?? 0}deg)`;
 }
 
-function renderMetrics(latest) {
+/** 1. Občutek temperature — opisni niz glede na temp + vlažnost */
+function feelsLikeLabel(temp, humidity) {
+  if (temp == null) return null;
+  // Poenostavljen heat index za visoke temperature
+  let feels = temp;
+  if (temp >= 27 && humidity != null) {
+    feels = -8.784695 + 1.61139411 * temp + 2.3385 * humidity / 100
+      - 0.14611605 * temp * humidity / 100
+      - 0.012308094 * temp * temp
+      - 0.016424828 * (humidity / 100) * (humidity / 100)
+      + 0.002211732 * temp * temp * humidity / 100
+      + 0.00072546 * temp * (humidity / 100) * (humidity / 100)
+      - 0.000003582 * temp * temp * (humidity / 100) * (humidity / 100);
+  }
+  if (feels <= 0)  return { txt: 'Zmrzuje', cls: 'feel--freeze' };
+  if (feels <= 8)  return { txt: 'Mrzlo', cls: 'feel--cold' };
+  if (feels <= 15) return { txt: 'Hladno', cls: 'feel--cool' };
+  if (feels <= 22) return { txt: 'Prijetno', cls: 'feel--nice' };
+  if (feels <= 28) return { txt: 'Toplo', cls: 'feel--warm' };
+  if (feels <= 35) return { txt: 'Vroče', cls: 'feel--hot' };
+  return { txt: 'Zelo vroče', cls: 'feel--scorching' };
+}
+
+/** 2. Trend — primerjamo zadnjo meritev z meritvijo ~1h prej */
+function tempTrend(readings) {
+  if (!readings?.length) return null;
+  const latest = readings[readings.length - 1];
+  if (latest?.temp == null || !latest.time) return null;
+  const cutoff = latest.time.getTime() - 50 * 60 * 1000; // ~50 min nazaj
+  const older = [...readings].reverse().find(
+    (r) => r.temp != null && r.time && r.time.getTime() <= cutoff,
+  );
+  if (!older) return null;
+  const diff = latest.temp - older.temp;
+  if (diff > 0.4)  return { arrow: '↑', cls: 'trend--up',   title: `+${diff.toFixed(1)}° v zadnji uri` };
+  if (diff < -0.4) return { arrow: '↓', cls: 'trend--down', title: `${diff.toFixed(1)}° v zadnji uri` };
+  return { arrow: '→', cls: 'trend--flat', title: 'Stabilno' };
+}
+
+/** 3. Čas zadnjega dežja */
+function lastRainLabel(readings) {
+  if (!readings?.length) return null;
+  const latest = readings[readings.length - 1];
+  if (latest?.precipTotal != null && latest.precipTotal > 0) return null; // dežuje zdaj
+  // Poišči zadnji zapis z precipTotal > 0
+  for (let i = readings.length - 1; i >= 0; i--) {
+    if (readings[i].precipTotal != null && readings[i].precipTotal > 0) {
+      const diffMs = Date.now() - readings[i].time.getTime();
+      const diffH = Math.round(diffMs / 3_600_000);
+      if (diffH < 24)  return `pred ${diffH}h`;
+      const diffD = Math.round(diffH / 24);
+      return `pred ${diffD} ${diffD === 1 ? 'dnem' : diffD < 5 ? 'dnevi' : 'dnevi'}`;
+    }
+  }
+  return 'ni podatka';
+}
+
+function renderMetrics(latest, readings) {
   const grid = $('#metrics');
   if (!grid || !latest) return;
 
+  const trend = tempTrend(readings);
+  const feel = feelsLikeLabel(latest.temp, latest.humidity);
+  const lastRain = lastRainLabel(readings);
+  const rainValue = latest.precipTotal > 0
+    ? formatNum(latest.precipTotal, ' mm', 1)
+    : lastRain ? `<span class="now-stat__sub">Zadnji: ${lastRain}</span>` : '0 mm';
+
   const items = [
-    { label: 'Vlažnost', short: 'Vlaž.', value: formatNum(latest.humidity, '%', 0) },
-    { label: 'Tlak', short: 'Tlak', value: formatNum(latest.pressure, ' hPa', 0) },
-    { label: 'Padavine', short: 'Dež', value: formatNum(latest.precipTotal, ' mm', 1) },
-    { label: 'Sunek', short: 'Sunek', value: formatNum(latest.windGust, ' m/s', 1) },
-    { label: 'UV', short: 'UV', value: formatNum(latest.uv, '', 0) },
-    { label: 'Sončno', short: 'Sonce', value: formatNum(latest.solar, ' W/m²', 0) },
+    { short: 'Vlaž.', value: formatNum(latest.humidity, '%', 0) },
+    { short: 'Tlak',  value: formatNum(latest.pressure, ' hPa', 0) },
+    { short: 'Dež',   value: rainValue },
+    { short: 'Sunek', value: formatNum(latest.windGust, ' m/s', 1) },
+    { short: 'UV',    value: formatNum(latest.uv, '', 0) },
+    { short: 'Sonce', value: formatNum(latest.solar, ' W/m²', 0) },
   ];
+
+  // Trend + občutek v hero
+  const trendEl = $('#temp-trend');
+  if (trendEl && trend) {
+    trendEl.textContent = trend.arrow;
+    trendEl.className = `now-panel__trend ${trend.cls}`;
+    trendEl.title = trend.title;
+  }
+  const feelEl = $('#temp-feel');
+  if (feelEl && feel) {
+    feelEl.textContent = feel.txt;
+    feelEl.className = `now-panel__feel ${feel.cls}`;
+  }
 
   grid.innerHTML = items
     .map(
@@ -145,7 +222,7 @@ function renderAll(bundle, fromCache = false) {
   const { readings, latest, summary, fetchedAt } = bundle;
 
   renderHero(latest, summary, readings);
-  renderMetrics(latest);
+  renderMetrics(latest, readings);
 
   let chartError = null;
   try {
@@ -267,6 +344,7 @@ async function init() {
 
   refresh();
   setInterval(refresh, REFRESH_MS);
+
 }
 
 init().catch((e) => {
