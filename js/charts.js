@@ -2,6 +2,7 @@ import { CHART, baseChartOptions } from './chart-theme.js';
 
 let hourlyChart;
 let dailyChart;
+let precipChart;
 
 export function renderHourlyChart(canvas, readings, formatTime) {
   if (!canvas || typeof Chart === 'undefined') return;
@@ -86,5 +87,57 @@ export function renderDailyChart(canvas, daily) {
       ],
     },
     options: baseChartOptions(),
+  });
+}
+
+export function renderPrecipChart24h(canvas, readings, formatTime) {
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  // Združimo padavine po urah – vzamemo zadnjo vrednost precipTotal vsake ure
+  // in iz razlike izračunamo koliko je padlo v tisti uri
+  const byHour = new Map();
+  for (const r of readings) {
+    if (!r.time) continue;
+    const key = r.time.toLocaleString('sv-SE', {
+      timeZone: 'Europe/Ljubljana',
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit',
+    });
+    byHour.set(key, r); // zadnji zapis ure
+  }
+
+  const sorted = [...byHour.values()].sort((a, b) => a.time - b.time);
+  const labels = sorted.map((r) =>
+    formatTime(r.time, { hour: '2-digit', minute: '2-digit' }),
+  );
+
+  // precipTotal se resetira ponoči – vzamemo direktne vrednosti, kjer gre navzgor
+  const data = sorted.map((r) => r.precipTotal ?? 0);
+
+  if (precipChart) precipChart.destroy();
+
+  precipChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Padavine mm',
+          data,
+          backgroundColor: CHART.rainFill,
+          borderColor: CHART.rain,
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: baseChartOptions({
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'mm', color: CHART.text },
+        },
+      },
+    }),
   });
 }

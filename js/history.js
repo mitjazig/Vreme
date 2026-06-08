@@ -71,31 +71,42 @@ function fmtDateTime(dt) {
   return dt.toLocaleDateString('sl-SI', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Ljubljana' });
 }
 
-function renderSummary(summary, label) {
+function diffBadge(cur, prev) {
+  if (cur == null || prev == null) return '';
+  const d = cur - prev;
+  if (Math.abs(d) < 0.05) return '';
+  const sign = d > 0 ? '+' : '';
+  const cls = d > 0 ? 'diff-badge--up' : 'diff-badge--down';
+  return `<span class="diff-badge ${cls}">${sign}${d.toFixed(1)}</span>`;
+}
+
+function renderSummary(summary, label, prev = null, prevYear = null) {
   const el = $('#period-summary');
   if (!el) return;
   const minDt = fmtDateTime(summary.minTime);
   const maxDt = fmtDateTime(summary.maxTime);
+  const cmp = prev ? `<p class="summary-strip__cmp">Primerjava z letom ${prevYear}:</p>` : '';
   el.innerHTML = `
     <p class="summary-strip__label">${label}</p>
+    ${cmp}
     <div class="stat-pills">
       <div class="stat-pill stat-pill--cold">
         <span class="stat-pill__lbl">Min</span>
-        <span class="stat-pill__val">${formatTemp(summary.min)}</span>
+        <span class="stat-pill__val">${formatTemp(summary.min)}${prev ? diffBadge(summary.min, prev.min) : ''}</span>
         ${minDt ? `<span class="stat-pill__dt">${minDt}</span>` : ''}
       </div>
       <div class="stat-pill stat-pill--warm">
         <span class="stat-pill__lbl">Povpr.</span>
-        <span class="stat-pill__val">${formatTemp(summary.avg)}</span>
+        <span class="stat-pill__val">${formatTemp(summary.avg)}${prev ? diffBadge(summary.avg, prev.avg) : ''}</span>
       </div>
       <div class="stat-pill stat-pill--hot">
         <span class="stat-pill__lbl">Max</span>
-        <span class="stat-pill__val">${formatTemp(summary.max)}</span>
+        <span class="stat-pill__val">${formatTemp(summary.max)}${prev ? diffBadge(summary.max, prev.max) : ''}</span>
         ${maxDt ? `<span class="stat-pill__dt">${maxDt}</span>` : ''}
       </div>
       <div class="stat-pill stat-pill--rain">
         <span class="stat-pill__lbl">Dež</span>
-        <span class="stat-pill__val">${formatNum(summary.rainTotal, ' mm', 1)}</span>
+        <span class="stat-pill__val">${formatNum(summary.rainTotal, ' mm', 1)}${prev ? diffBadge(summary.rainTotal, prev.rainTotal) : ''}</span>
       </div>
       <div class="stat-pill">
         <span class="stat-pill__lbl">Deževni dnevi</span>
@@ -117,6 +128,14 @@ function renderTable(daily) {
     return;
   }
 
+  // Poišči rekorde za period
+  const validMin = daily.filter((d) => d.min != null);
+  const validMax = daily.filter((d) => d.max != null);
+  const validRain = daily.filter((d) => d.rain != null && d.rain > 0);
+  const recMin = validMin.length ? Math.min(...validMin.map((d) => d.min)) : null;
+  const recMax = validMax.length ? Math.max(...validMax.map((d) => d.max)) : null;
+  const recRain = validRain.length ? Math.max(...validRain.map((d) => d.rain)) : null;
+
   tbody.innerHTML = daily
     .map((d) => {
       const dateStr = d.date.toLocaleDateString('sl-SI', {
@@ -126,13 +145,21 @@ function renderTable(daily) {
       });
       const hot = d.max != null && d.max >= 28;
       const cold = d.min != null && d.min <= 0;
+      const isRecMin = recMin != null && d.min === recMin;
+      const isRecMax = recMax != null && d.max === recMax;
+      const isRecRain = recRain != null && d.rain === recRain;
+      const minCell = `${formatTemp(d.min)}${isRecMin ? ' <span class="rec-badge rec-badge--cold" title="Najnižja temperatura v obdobju">❄</span>' : ''}`;
+      const maxCell = `${formatTemp(d.max)}${isRecMax ? ' <span class="rec-badge rec-badge--hot" title="Najvišja temperatura v obdobju">🔥</span>' : ''}`;
+      const rainCell = d.rain != null && d.rain > 0
+        ? `${formatNum(d.rain, ' mm', 1)}${isRecRain ? ' <span class="rec-badge rec-badge--rain" title="Največ padavin v obdobju">💧</span>' : ''}`
+        : '·';
       return `<tr class="${hot ? 'row-hot' : cold ? 'row-cold' : ''}">
         <td>${dateStr}</td>
-        <td>${formatTemp(d.min)}</td>
-        <td>${formatTemp(d.max)}</td>
+        <td>${minCell}</td>
+        <td>${maxCell}</td>
         <td>${formatTemp(d.avg)}</td>
         <td>${formatNum(d.humidity, '%', 0)}</td>
-        <td>${d.rain != null && d.rain > 0 ? formatNum(d.rain, ' mm', 1) : '·'}</td>
+        <td>${rainCell}</td>
       </tr>`;
     })
     .join('');
@@ -171,17 +198,26 @@ async function loadPeriod() {
   setStatus('Nalagam statistiko…');
 
   try {
-    const readings = isYear
-      ? await fetchYearReadings(year)
-      : await fetchMonthReadings(year, Number(monthVal));
+    const month = Number(monthVal);
+
+    // Naložimo tekoče in (za mesečni prikaz) lansko leto vzporedno
+    const [readings, prevReadings] = await Promise.all([
+      isYear ? fetchYearReadings(year) : fetchMonthReadings(year, month),
+      (!isYear && bounds?.years.includes(year - 1))
+        ? fetchMonthReadings(year - 1, month).catch(() => [])
+        : Promise.resolve([]),
+    ]);
 
     const daily = aggregateByDay(readings);
     const summary = monthSummary(daily);
 
-    const monthName = isYear ? String(year) : MONTHS_SL[Number(monthVal) - 1];
+    const prevDaily = prevReadings.length ? aggregateByDay(prevReadings) : null;
+    const prevSummary = prevDaily ? monthSummary(prevDaily) : null;
+
+    const monthName = isYear ? String(year) : MONTHS_SL[month - 1];
     const label = isYear ? `Leto ${year}` : `${monthName} ${year}`;
 
-    renderSummary(summary, label);
+    renderSummary(summary, label, prevSummary, year - 1);
     renderTable(daily);
     renderCharts(readings, daily, label, isYear);
 

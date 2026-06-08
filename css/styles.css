@@ -599,6 +599,33 @@ body.is-loading .now-panel__temp span:first-child {
   line-height: 1.2;
 }
 
+/* Diff badge – primerjava z lanskim letom */
+.diff-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+  margin-left: 0.25em;
+  vertical-align: middle;
+}
+.diff-badge--up   { background: rgba(251, 146, 60, 0.18); color: #fb923c; }
+.diff-badge--down { background: rgba(56, 189, 248, 0.18); color: #38bdf8; }
+
+/* Napis primerjave nad piluli */
+.summary-strip__cmp {
+  font-size: 0.7rem;
+  opacity: 0.55;
+  margin: -0.25rem 0 0.35rem;
+}
+
+/* Rekordne oznake v tabeli */
+.rec-badge {
+  font-size: 0.7rem;
+  vertical-align: middle;
+  margin-left: 0.1em;
+}
+
 .table-card {
   padding-bottom: 0.75rem;
 }
