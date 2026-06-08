@@ -1,5 +1,5 @@
 import { initPwaUpdates } from './pwa-update.js';
-import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel } from './forecast.js';
+import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides } from './forecast.js';
 import { fetchAlerts, alertCls, alertLabel } from './alerts.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -106,6 +106,137 @@ function renderSeaTemp(sea) {
         </div>`;
       }).join('')}
     </div>`;
+}
+
+/** —— Plima / oseka —— */
+function renderTides() {
+  const el = document.getElementById('tide-content');
+  if (!el) return;
+
+  const now = new Date();
+  // Round down to hour start for consistent display
+  const fromMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()).getTime();
+  const { points, extrema } = calcTides(fromMs, 36);
+
+  const fmtTime = (d) => d.toLocaleTimeString('sl-SI', {
+    timeZone: 'Europe/Ljubljana', hour: '2-digit', minute: '2-digit',
+  });
+  const fmtDay = (d) => d.toLocaleDateString('sl-SI', {
+    timeZone: 'Europe/Ljubljana', weekday: 'short', day: 'numeric',
+  });
+
+  // SVG mini chart
+  const W = 320, H = 80, PAD = 4;
+  const levels = points.map((p) => p.level);
+  const lMin = Math.min(...levels);
+  const lMax = Math.max(...levels);
+  const xScale = (W - PAD * 2) / (points.length - 1);
+  const yScale = (H - PAD * 2) / (lMax - lMin || 1);
+  const toX = (i) => PAD + i * xScale;
+  const toY = (v) => H - PAD - (v - lMin) * yScale;
+
+  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(i).toFixed(1)},${toY(p.level).toFixed(1)}`).join(' ');
+  const fillD = `${pathD} L${toX(points.length - 1).toFixed(1)},${H} L${PAD},${H} Z`;
+
+  // Now marker
+  const nowIdx = points.findIndex((p) => p.time >= now);
+  const nowX = nowIdx >= 0 ? toX(nowIdx) : toX(0);
+  const nowY = nowIdx >= 0 ? toY(points[nowIdx].level) : H / 2;
+
+  // Next 6 extrema
+  const upcoming = extrema.filter((e) => e.time >= now).slice(0, 6);
+
+  const tideLabel = (e) => e.type === 'high' ? 'Visoka voda' : 'Nizka voda';
+  const tideIcon = (e) => e.type === 'high' ? '🌊' : '🏖️';
+
+  el.innerHTML = `
+    <div class="tide-chart-wrap">
+      <svg class="tide-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="tideGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.45"/>
+            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.04"/>
+          </linearGradient>
+        </defs>
+        <path d="${fillD}" fill="url(#tideGrad)"/>
+        <path d="${pathD}" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="${nowX.toFixed(1)}" y1="${PAD}" x2="${nowX.toFixed(1)}" y2="${H - PAD}" stroke="rgba(248,250,252,0.5)" stroke-width="1" stroke-dasharray="3,3"/>
+        <circle cx="${nowX.toFixed(1)}" cy="${nowY.toFixed(1)}" r="3.5" fill="#38bdf8" stroke="#fff" stroke-width="1.5"/>
+      </svg>
+      <div class="tide-axis">
+        <span>${(lMax + 0.26).toFixed(2)} m</span>
+        <span>${((lMin + lMax) / 2 + 0.26).toFixed(2)} m</span>
+        <span>${(lMin + 0.26).toFixed(2)} m</span>
+      </div>
+    </div>
+    <div class="tide-extrema">
+      ${upcoming.map((e) => {
+        const isToday = e.time.toLocaleDateString('sl-SI', { timeZone: 'Europe/Ljubljana' }) === now.toLocaleDateString('sl-SI', { timeZone: 'Europe/Ljubljana' });
+        return `<div class="tide-event tide-event--${e.type}">
+          <span class="tide-event__icon">${tideIcon(e)}</span>
+          <div class="tide-event__info">
+            <span class="tide-event__label">${tideLabel(e)}</span>
+            <span class="tide-event__time">${isToday ? '' : fmtDay(e.time) + ' '}${fmtTime(e.time)}</span>
+          </div>
+          <span class="tide-event__level">${(e.level + 0.26).toFixed(2)} m</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <p class="tide-note">* Višine so relativne glede na povprečno gladino morja (MSL). Harmonični model – orientacijska vrednost.</p>`;
+}
+
+/** —— Kakovost zraka —— */
+function renderAirQuality(aq) {
+  const el = document.getElementById('aq-content');
+  if (!el) return;
+  if (!aq || aq.aqi == null) {
+    el.innerHTML = '<p class="forecast-loading">Podatki o kakovosti zraka niso na voljo.</p>';
+    return;
+  }
+
+  const aqi = Math.round(aq.aqi);
+  let label, cls;
+  if (aqi <= 20)       { label = 'Dobra';           cls = 'aqi--good'; }
+  else if (aqi <= 40)  { label = 'Sprejemljiva';    cls = 'aqi--fair'; }
+  else if (aqi <= 60)  { label = 'Zmerna';          cls = 'aqi--moderate'; }
+  else if (aqi <= 80)  { label = 'Slaba';           cls = 'aqi--poor'; }
+  else if (aqi <= 100) { label = 'Zelo slaba';      cls = 'aqi--verypoor'; }
+  else                 { label = 'Izredno slaba';   cls = 'aqi--hazardous'; }
+
+  const pct = Math.min(100, aqi);
+  const pollutants = [
+    { lbl: 'PM10',  val: aq.pm10,  unit: 'μg/m³', limit: 40 },
+    { lbl: 'PM2.5', val: aq.pm25,  unit: 'μg/m³', limit: 25 },
+    { lbl: 'NO₂',   val: aq.no2,   unit: 'μg/m³', limit: 40 },
+    { lbl: 'O₃',    val: aq.ozone, unit: 'μg/m³', limit: 100 },
+  ].filter((p) => p.val != null);
+
+  el.innerHTML = `
+    <div class="aq-hero ${cls}">
+      <div class="aq-aqi">
+        <span class="aq-aqi__val">${aqi}</span>
+        <span class="aq-aqi__lbl">EU AQI</span>
+      </div>
+      <div class="aq-bar-wrap">
+        <div class="aq-bar">
+          <div class="aq-bar__fill ${cls}" style="width:${pct}%"></div>
+          <div class="aq-bar__marker" style="left:${pct}%"></div>
+        </div>
+        <span class="aq-label ${cls}">${label}</span>
+      </div>
+    </div>
+    <div class="aq-pollutants">
+      ${pollutants.map((p) => {
+        const pct2 = Math.min(100, (p.val / (p.limit * 2)) * 100);
+        const over = p.val > p.limit;
+        return `<div class="aq-poll">
+          <span class="aq-poll__lbl">${p.lbl}</span>
+          <div class="aq-poll__bar"><div class="aq-poll__fill ${over ? 'aq-poll__fill--over' : ''}" style="width:${pct2.toFixed(0)}%"></div></div>
+          <span class="aq-poll__val ${over ? 'aq-poll__val--over' : ''}">${p.val.toFixed(1)} ${p.unit}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <p class="tide-note">Vir: Open-Meteo Air Quality API · ${new Date().toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })}</p>`;
 }
 
 /** —— Radar zemljevid (Leaflet + RainViewer) —— */
@@ -215,11 +346,12 @@ function toggleRadarPlay() {
 async function load() {
   setStatus('Nalagam napoved…');
   try {
-    const [forecast, hourly, alerts, sea] = await Promise.allSettled([
+    const [forecast, hourly, alerts, sea, aq] = await Promise.allSettled([
       fetchForecast(),
       fetchHourlyForecast(),
       fetchAlerts(),
       fetchSeaTemp(),
+      fetchAirQuality(),
     ]);
 
     if (forecast.status === 'fulfilled') renderForecast(forecast.value);
@@ -232,6 +364,12 @@ async function load() {
 
     if (sea.status === 'fulfilled') renderSeaTemp(sea.value);
     else renderSeaTemp(null);
+
+    if (aq.status === 'fulfilled') renderAirQuality(aq.value);
+    else renderAirQuality(null);
+
+    // Plima se računa lokalno, ne zahteva API klica
+    renderTides();
 
     setStatus(`Posodobljeno ${new Date().toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })}`);
   } catch (err) {

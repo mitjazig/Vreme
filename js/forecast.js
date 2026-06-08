@@ -91,6 +91,69 @@ export async function fetchSeaTemp() {
   return { current, daily };
 }
 
+/** ——————— Plima / oseka ——————— */
+// Harmonični model za Koper (Severni Jadran)
+// Konstante: [hitrost °/h, amplituda m, faza °]
+// Referenčna epoha: 2000-01-01 00:00 UTC
+// Faza = G (lokalni zamik) − V0 − u pri epohi
+const TIDE_CONST = [
+  [28.9841042, 0.117, 147.2], // M2 – glavna lunarna polobroča
+  [30.0000000, 0.062, 296.0], // S2 – glavna sončna polobroča
+  [15.0410686, 0.074, 345.3], // K1 – lunarna dnevna
+  [13.9430356, 0.038, 174.8], // O1 – lunarna dnevna
+  [28.4397295, 0.022, 253.7], // N2 – večja lunarna eliptična
+];
+const TIDE_EPOCH = Date.UTC(2000, 0, 1);
+
+export function calcTides(fromMs = Date.now(), hoursAhead = 36) {
+  const STEP_MIN = 15;
+  const points = [];
+  for (let m = 0; m <= hoursAhead * 60; m += STEP_MIN) {
+    const t = new Date(fromMs + m * 60_000);
+    const hrs = (t.getTime() - TIDE_EPOCH) / 3_600_000;
+    let h = 0;
+    for (const [speed, amp, phase] of TIDE_CONST) {
+      h += amp * Math.cos((speed * hrs - phase) * (Math.PI / 180));
+    }
+    points.push({ time: t, level: +h.toFixed(3) });
+  }
+
+  // Poišči vrhove (visoka/nizka voda)
+  const extrema = [];
+  for (let i = 1; i < points.length - 1; i++) {
+    const p = points[i - 1].level, c = points[i].level, n = points[i + 1].level;
+    if (c >= p && c >= n && c - Math.min(p, n) > 0.01) {
+      extrema.push({ ...points[i], type: 'high' });
+    } else if (c <= p && c <= n && Math.max(p, n) - c > 0.01) {
+      extrema.push({ ...points[i], type: 'low' });
+    }
+  }
+  return { points, extrema };
+}
+
+/** ——————— Kakovost zraka (Open-Meteo) ——————— */
+export async function fetchAirQuality() {
+  const params = new URLSearchParams({
+    latitude: LAT,
+    longitude: LON,
+    current: ['european_aqi', 'pm10', 'pm2_5', 'nitrogen_dioxide', 'ozone'].join(','),
+    hourly: ['european_aqi', 'pm10', 'pm2_5'].join(','),
+    timezone: 'Europe/Ljubljana',
+    forecast_days: '2',
+  });
+  const res = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?${params}`);
+  if (!res.ok) throw new Error(`AQ API HTTP ${res.status}`);
+  const json = await res.json();
+  const c = json.current ?? {};
+  return {
+    aqi: c.european_aqi ?? null,
+    pm10: c.pm10 ?? null,
+    pm25: c.pm2_5 ?? null,
+    no2: c.nitrogen_dioxide ?? null,
+    ozone: c.ozone ?? null,
+  };
+}
+
 export async function fetchForecast() {
   const params = new URLSearchParams({
     latitude: LAT,
