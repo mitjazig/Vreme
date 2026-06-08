@@ -161,9 +161,39 @@ export async function fetchReadingsRange(start, end, year) {
   return rows.map(normalizeReading).filter((r) => r.time);
 }
 
+async function fetchPrecipTotalBefore(date, year) {
+  const sheet = sheetForYear(year);
+  const q = [
+    'select Q',
+    `where C < ${dateQueryLiteral(date)} and Q is not null`,
+    'order by C desc limit 1',
+  ].join(' ');
+  try {
+    const rows = await fetchGviz({ sheet, query: q });
+    const row = rows[0] ?? {};
+    return num(Object.values(row).find((x) => x != null) ?? null);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Vrne meritve za točno določen dan v določenem letu.
+ * Hiter (1 query/leto), namenjen "ta dan v zgodovini".
+ */
+export async function fetchDayReadings(year, month, day) {
+  const start = new Date(year, month - 1, day);
+  const end   = new Date(year, month - 1, day + 1);
+  return fetchReadingsRange(start, end, year);
+}
+
 export async function fetchMonthReadings(year, month) {
   const { start, end } = monthRange(year, month);
-  return fetchReadingsRange(start, end, year);
+  const [readings, initialPrecipTotal] = await Promise.all([
+    fetchReadingsRange(start, end, year),
+    fetchPrecipTotalBefore(start, year),
+  ]);
+  return { readings, initialPrecipTotal };
 }
 
 export async function fetchYearReadings(year) {

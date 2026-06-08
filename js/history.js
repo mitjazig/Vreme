@@ -200,18 +200,29 @@ async function loadPeriod() {
   try {
     const month = Number(monthVal);
 
-    // Naložimo tekoče in (za mesečni prikaz) lansko leto vzporedno
-    const [readings, prevReadings] = await Promise.all([
-      isYear ? fetchYearReadings(year) : fetchMonthReadings(year, month),
-      (!isYear && bounds?.years.includes(year - 1))
-        ? fetchMonthReadings(year - 1, month).catch(() => [])
-        : Promise.resolve([]),
-    ]);
+    let readings, initialPrecipTotal, prevReadings, prevInitialPrecipTotal;
+    if (isYear) {
+      readings = await fetchYearReadings(year);
+      initialPrecipTotal = null;
+      prevReadings = [];
+      prevInitialPrecipTotal = null;
+    } else {
+      const [monthData, prevData] = await Promise.all([
+        fetchMonthReadings(year, month),
+        bounds?.years.includes(year - 1)
+          ? fetchMonthReadings(year - 1, month).catch(() => ({ readings: [], initialPrecipTotal: null }))
+          : Promise.resolve({ readings: [], initialPrecipTotal: null }),
+      ]);
+      ({ readings, initialPrecipTotal } = monthData);
+      ({ readings: prevReadings, initialPrecipTotal: prevInitialPrecipTotal } = prevData);
+    }
 
-    const daily = aggregateByDay(readings);
+    const daily = aggregateByDay(readings, initialPrecipTotal);
     const summary = monthSummary(daily);
 
-    const prevDaily = prevReadings.length ? aggregateByDay(prevReadings) : null;
+    const prevDaily = prevReadings.length
+      ? aggregateByDay(prevReadings, prevInitialPrecipTotal)
+      : null;
     const prevSummary = prevDaily ? monthSummary(prevDaily) : null;
 
     const monthName = isYear ? String(year) : MONTHS_SL[month - 1];

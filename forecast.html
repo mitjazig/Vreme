@@ -122,6 +122,55 @@
         </div>
       </section>
 
+      <!-- Strele (Blitzortung) -->
+      <section class="card lightning-card" aria-label="Strele v živo">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(251,191,36,0.15);color:#fbbf24" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11L10 22L20.5 10H14L13 2Z"/></svg>
+          </span>
+          <div>
+            <h2 class="card__title">Strele v živo</h2>
+            <p class="card__desc">Blitzortung · Slovenija &amp; okolica</p>
+          </div>
+          <div class="lightning-status">
+            <span id="lightning-dot" class="lightning-dot lightning-dot--off" title="Stanje povezave"></span>
+          </div>
+        </div>
+
+        <!-- Stats vrstica -->
+        <div id="lightning-stats" class="lightning-stats">
+          <div class="lightning-stat">
+            <span class="lightning-stat__val" id="ls-5m">—</span>
+            <span class="lightning-stat__lbl">zadnjih 5 min</span>
+          </div>
+          <div class="lightning-stat">
+            <span class="lightning-stat__val" id="ls-15m">—</span>
+            <span class="lightning-stat__lbl">zadnjih 15 min</span>
+          </div>
+          <div class="lightning-stat">
+            <span class="lightning-stat__val" id="ls-1h">—</span>
+            <span class="lightning-stat__lbl">zadnja ura</span>
+          </div>
+          <div class="lightning-stat lightning-stat--near" id="ls-nearest-wrap">
+            <span class="lightning-stat__val" id="ls-nearest">—</span>
+            <span class="lightning-stat__lbl">najbližja</span>
+          </div>
+        </div>
+
+        <!-- Legenda -->
+        <div class="lightning-legend">
+          <span class="lightning-legend__item lightning-legend__item--new">● &lt;5 min</span>
+          <span class="lightning-legend__item lightning-legend__item--15">● &lt;15 min</span>
+          <span class="lightning-legend__item lightning-legend__item--30">● &lt;30 min</span>
+          <span class="lightning-legend__item lightning-legend__item--old">● &lt;60 min</span>
+        </div>
+
+        <!-- Leaflet mini mapa -->
+        <div class="radar-map-wrap">
+          <div id="lightning-map" class="radar-map"></div>
+        </div>
+      </section>
+
       <!-- Radarski zemljevid -->
       <section class="card radar-card" aria-label="Radarski zemljevid padavin">
         <div class="card__head">
@@ -192,6 +241,12 @@
           <path d="M16 2v4M8 2v4M3 10h18" />
         </svg>
         Zgodovina
+      </a>
+      <a href="./records.html" class="bottom-nav__link">
+        <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        Rekordi
       </a>
     </nav>
 

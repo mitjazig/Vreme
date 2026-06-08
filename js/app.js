@@ -1,7 +1,9 @@
-import { REFRESH_MS, APP_VERSION } from './config.js';
+import { REFRESH_MS, APP_VERSION, YEAR_SHEETS } from './config.js';
+import { sunriseSunset, moonPhase } from './astro.js';
+import { getDayFacts } from './fun-facts.js';
 import { setupInstallUI } from './install-ui.js';
 import { initPwaUpdates } from './pwa-update.js';
-import { loadWeatherBundle } from './sheets.js';
+import { loadWeatherBundle, fetchDayReadings } from './sheets.js';
 import { renderHourlyChart, renderDailyChart, renderPrecipChart24h } from './charts.js';
 import {
   windLabel,
@@ -175,6 +177,93 @@ function todayMinMax(readings) {
   return { min: Math.min(...temps), max: Math.max(...temps) };
 }
 
+/** —— Zanimivost dneva —— */
+function renderDayFact(latest) {
+  const el = document.getElementById('day-fact');
+  if (!el) return;
+  const { primary, secondary } = getDayFacts(latest);
+  el.hidden = false;
+  el.innerHTML = `
+    <span class="day-fact__icon">💡</span>
+    <div class="day-fact__body">
+      <p class="day-fact__text">${primary}</p>
+      ${secondary ? `<p class="day-fact__secondary">${secondary}</p>` : ''}
+    </div>`;
+}
+
+/** —— Sončni pas + lunina faza —— */
+function renderSunStrip() {
+  const el = document.getElementById('sun-strip');
+  if (!el) return;
+
+  const now    = new Date();
+  const sun    = sunriseSunset(now);
+  const moon   = moonPhase(now);
+
+  if (!sun) { el.hidden = true; return; }
+
+  const fmt = (d) => d.toLocaleTimeString('sl-SI', {
+    timeZone: 'Europe/Ljubljana', hour: '2-digit', minute: '2-digit',
+  });
+
+  // Pozicija Sonca na 24h časovnici (0–100%)
+  const minOfDay = now.getHours() * 60 + now.getMinutes();
+  const sunPct   = (minOfDay / (24 * 60)) * 100;
+
+  // Širina dnevnega okna
+  const risePct  = (sun.riseMin / (24 * 60)) * 100;
+  const setPct   = (sun.setMin  / (24 * 60)) * 100;
+  const dayWidth = setPct - risePct;
+
+  const isDay    = minOfDay >= sun.riseMin && minOfDay <= sun.setMin;
+  const sunIcon  = isDay ? '☀️' : '🌙';
+
+  const dayH  = Math.floor(sun.dayMinutes / 60);
+  const dayM  = sun.dayMinutes % 60;
+  const dayLen = `${dayH}h ${dayM}min`;
+
+  // Lunin vpliv na plimo
+  const tideTag = moon.tideEffect === 'spring'
+    ? '<span class="moon-tide moon-tide--spring">☊ Pomladna plima</span>'
+    : moon.tideEffect === 'neap'
+    ? '<span class="moon-tide moon-tide--neap">☋ Mrtvina</span>'
+    : '';
+
+  // Dnevi do naslednje polne lune / mlaja
+  const nextEvent = moon.daysToFull <= moon.daysToNew
+    ? `🌕 čez ${moon.daysToFull < 1 ? 'manj kot dan' : Math.round(moon.daysToFull) + ' dni'}`
+    : `🌑 čez ${moon.daysToNew  < 1 ? 'manj kot dan' : Math.round(moon.daysToNew)  + ' dni'}`;
+
+  el.hidden = false;
+  el.innerHTML = `
+    <div class="sun-arc">
+      <div class="sun-arc__track">
+        <div class="sun-arc__day" style="left:${risePct.toFixed(1)}%;width:${dayWidth.toFixed(1)}%"></div>
+        <div class="sun-arc__marker" style="left:clamp(0%,${sunPct.toFixed(1)}%,98%)">
+          <span class="sun-arc__dot" title="${isDay ? 'Dan' : 'Noč'}">${sunIcon}</span>
+        </div>
+      </div>
+      <div class="sun-arc__labels">
+        <span class="sun-arc__rise">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 3v1M4.22 6.22l.7.7M2 14h1M21 14h1M19.07 6.92l.71-.7M17 14a5 5 0 1 0-10 0"/><path d="M3 19h18M5 17l2-3M19 17l-2-3"/></svg>
+          ${fmt(sun.sunrise)}
+        </span>
+        <span class="sun-arc__daylen">${dayLen}</span>
+        <span class="sun-arc__set">
+          ${fmt(sun.sunset)}
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 3v1M4.22 6.22l.7.7M2 14h1M21 14h1M19.07 6.92l.71-.7M17 14a5 5 0 1 0-10 0"/><path d="M3 19h18M5 21l2-3M19 21l-2-3"/></svg>
+        </span>
+      </div>
+    </div>
+    <div class="moon-pill">
+      <span class="moon-pill__icon">${moon.emoji}</span>
+      <span class="moon-pill__name">${moon.name}</span>
+      <span class="moon-pill__illum">${moon.illum}%</span>
+      <span class="moon-pill__next">${nextEvent}</span>
+      ${tideTag}
+    </div>`;
+}
+
 function renderHero(latest, summary, readings) {
   const temp = latest?.temp ?? summary?.current;
   setText('#weather-icon', weatherIcon(weatherKind(latest)));
@@ -204,6 +293,93 @@ function renderHero(latest, summary, readings) {
   setText('#wind-speed', spd !== '—' ? spd : '—');
 }
 
+/** —— Ta dan v zgodovini —— */
+async function renderDayHistory() {
+  const el = document.getElementById('day-history');
+  if (!el) return;
+
+  const now    = new Date();
+  const month  = now.getMonth() + 1;
+  const day    = now.getDate();
+  const curYear = now.getFullYear();
+
+  // Pretekla leta ki imajo podatke
+  const pastYears = Object.keys(YEAR_SHEETS)
+    .map(Number)
+    .filter((y) => y < curYear)
+    .sort((a, b) => b - a); // od najnovejšega
+
+  if (!pastYears.length) { el.hidden = true; return; }
+
+  // Vzporedno fetch vseh let
+  el.hidden = false;
+  el.innerHTML = `<div class="dh-loading">Nalagam zgodovino…</div>`;
+
+  const results = await Promise.allSettled(
+    pastYears.map((y) => fetchDayReadings(y, month, day).then((r) => ({ year: y, readings: r })))
+  );
+
+  const entries = results
+    .filter((r) => r.status === 'fulfilled' && r.value.readings.length)
+    .map((r) => {
+      const { year, readings } = r.value;
+      const temps = readings.map((x) => x.temp).filter((t) => t != null);
+      const precip = readings.length ? (readings[readings.length - 1].precipTotal ?? 0) : 0;
+      const windGusts = readings.map((x) => x.windGust).filter((g) => g != null);
+      return {
+        year,
+        min:  temps.length ? Math.min(...temps) : null,
+        max:  temps.length ? Math.max(...temps) : null,
+        rain: precip,
+        wind: windGusts.length ? Math.max(...windGusts) : null,
+      };
+    });
+
+  if (!entries.length) { el.hidden = true; return; }
+
+  // Rekordni vrednosti čez vsa ta leta
+  const recMax  = Math.max(...entries.filter((e) => e.max  != null).map((e) => e.max));
+  const recMin  = Math.min(...entries.filter((e) => e.min  != null).map((e) => e.min));
+  const recRain = Math.max(...entries.filter((e) => e.rain  > 0).map((e) => e.rain));
+
+  const dateLabel = now.toLocaleDateString('sl-SI', { day: 'numeric', month: 'long' });
+
+  el.innerHTML = `
+    <div class="dh-header">
+      <span class="dh-header__icon">📅</span>
+      <span class="dh-header__title">Ta dan v preteklosti</span>
+      <span class="dh-header__date">${dateLabel}</span>
+    </div>
+    <div class="dh-scroll">
+      ${entries.map((e) => {
+        const isHotRec  = e.max  != null && e.max  === recMax;
+        const isColdRec = e.min  != null && e.min  === recMin;
+        const isRainRec = e.rain > 0      && e.rain === recRain;
+        const hasRain   = e.rain > 0.1;
+
+        return `<div class="dh-card">
+          <span class="dh-card__year">${e.year}</span>
+          <div class="dh-card__temps">
+            <span class="dh-card__max${isHotRec  ? ' dh-card__max--rec' : ''}"
+                  title="${isHotRec ? 'Rekord za ta dan' : ''}">
+              ${e.max != null ? e.max.toFixed(1) + '°' : '—'}${isHotRec ? ' 🔥' : ''}
+            </span>
+            <span class="dh-card__min${isColdRec ? ' dh-card__min--rec' : ''}"
+                  title="${isColdRec ? 'Rekord za ta dan' : ''}">
+              ${e.min != null ? e.min.toFixed(1) + '°' : '—'}${isColdRec ? ' ❄️' : ''}
+            </span>
+          </div>
+          ${hasRain
+            ? `<span class="dh-card__rain${isRainRec ? ' dh-card__rain--rec' : ''}">
+                 ${e.rain.toFixed(1)} mm${isRainRec ? ' 💧' : ''}
+               </span>`
+            : `<span class="dh-card__rain dh-card__rain--dry">·</span>`}
+          ${e.wind != null ? `<span class="dh-card__wind">${e.wind.toFixed(1)} m/s</span>` : ''}
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
 function renderCharts(readings) {
   if (typeof Chart === 'undefined') {
     throw new Error('Chart.js ni naložen');
@@ -223,6 +399,8 @@ function renderAll(bundle, fromCache = false) {
 
   renderHero(latest, summary, readings);
   renderMetrics(latest, readings);
+  renderSunStrip();
+  renderDayFact(latest);
 
   let chartError = null;
   try {
@@ -344,6 +522,9 @@ async function init() {
 
   refresh();
   setInterval(refresh, REFRESH_MS);
+
+  // Ta dan v preteklosti – enkrat ob zagonu (podatki se ne spremenijo čez dan)
+  renderDayHistory();
 
 }
 

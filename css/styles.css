@@ -1211,6 +1211,855 @@ body.is-loading .stat-pill {
   font-size: 0.85rem;
 }
 
+/* ——————————————————————————————————————
+   Zanimivost dneva
+   —————————————————————————————————————— */
+
+.day-fact {
+  margin: 0 1rem 0.75rem;
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.75rem 0.9rem;
+  background: rgba(148, 163, 184, 0.05);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-left: 3px solid rgba(251, 191, 36, 0.5);
+  border-radius: var(--radius-sm);
+}
+
+.day-fact__icon {
+  font-size: 1.05rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+}
+
+.day-fact__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.day-fact__text {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.day-fact__secondary {
+  margin: 0;
+  font-size: 0.73rem;
+  color: var(--muted);
+  line-height: 1.45;
+  padding-top: 0.3rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+/* ——————————————————————————————————————
+   Strele (Blitzortung)
+   —————————————————————————————————————— */
+
+.lightning-card { padding-bottom: 0.85rem; }
+
+/* Status dot */
+.lightning-status { margin-left: auto; display: flex; align-items: center; }
+
+.lightning-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.lightning-dot--on {
+  background: #34d399;
+  box-shadow: 0 0 6px rgba(52,211,153,0.7);
+  animation: lightning-pulse 2s infinite;
+}
+
+.lightning-dot--off {
+  background: rgba(148,163,184,0.4);
+}
+
+@keyframes lightning-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* Stats vrstica */
+.lightning-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid rgba(148,163,184,0.08);
+}
+
+.lightning-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.4rem 0.2rem;
+  border-radius: 8px;
+  background: rgba(251,191,36,0.05);
+}
+
+.lightning-stat--near { background: rgba(56,189,248,0.06); }
+
+.lightning-stat--danger {
+  background: rgba(244,63,94,0.12);
+  border: 1px solid rgba(244,63,94,0.3);
+  animation: lightning-flash 1s ease-in-out 3;
+}
+
+@keyframes lightning-flash {
+  0%, 100% { background: rgba(244,63,94,0.12); }
+  50%      { background: rgba(244,63,94,0.25); }
+}
+
+.lightning-stat__val {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fbbf24;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.lightning-stat--near .lightning-stat__val { color: #38bdf8; }
+.lightning-stat--danger .lightning-stat__val { color: var(--hot); }
+
+.lightning-stat__lbl {
+  font-size: 0.58rem;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Legenda */
+.lightning-legend {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.4rem 1rem;
+  font-size: 0.65rem;
+}
+
+.lightning-legend__item { display: flex; align-items: center; gap: 0.2rem; color: var(--muted); }
+.lightning-legend__item--new  { color: #ffffff; }
+.lightning-legend__item--15   { color: #fbbf24; }
+.lightning-legend__item--30   { color: #f97316; }
+.lightning-legend__item--old  { color: rgba(244,63,94,0.7); }
+
+/* ——————————————————————————————————————
+   Ta dan v preteklosti (glavna stran)
+   —————————————————————————————————————— */
+
+.day-history {
+  margin: 0 1rem 0.75rem;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.dh-loading {
+  padding: 0.75rem 1rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.dh-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem 0.5rem;
+  border-bottom: 1px solid rgba(148,163,184,0.08);
+}
+
+.dh-header__icon { font-size: 0.95rem; }
+
+.dh-header__title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dh-header__date {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-left: auto;
+}
+
+.dh-scroll {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0.65rem 1rem 0.75rem;
+  -webkit-overflow-scrolling: touch;
+}
+.dh-scroll::-webkit-scrollbar { display: none; }
+
+.dh-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 68px;
+  padding: 0.55rem 0.5rem;
+  background: rgba(148,163,184,0.05);
+  border: 1px solid rgba(148,163,184,0.1);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.dh-card__year {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.dh-card__temps {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.dh-card__max {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #f97316;
+  white-space: nowrap;
+}
+
+.dh-card__max--rec { color: var(--hot); }
+
+.dh-card__min {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--cold);
+  white-space: nowrap;
+}
+
+.dh-card__min--rec { color: #60a5fa; }
+
+.dh-card__rain {
+  font-size: 0.68rem;
+  color: var(--rain);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dh-card__rain--rec { color: #34d399; }
+
+.dh-card__rain--dry { color: var(--muted); }
+
+.dh-card__wind {
+  font-size: 0.62rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ——————————————————————————————————————
+   Sončni pas + lunina faza (glavna stran)
+   —————————————————————————————————————— */
+
+.sun-strip {
+  margin: 0 1rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+/* 24h časovnica s sončnim lokom */
+.sun-arc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sun-arc__track {
+  position: relative;
+  height: 8px;
+  background: rgba(148, 163, 184, 0.12);
+  border-radius: 4px;
+  overflow: visible;
+}
+
+/* Dnevni del (med vzhodom in zahodom) */
+.sun-arc__day {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(251,191,36,0.25), rgba(251,191,36,0.55), rgba(251,191,36,0.25));
+  border-radius: 4px;
+}
+
+/* Marker za trenutno pozicijo sonca / lune */
+.sun-arc__marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  line-height: 1;
+  font-size: 1rem;
+  z-index: 1;
+}
+
+.sun-arc__dot {
+  display: block;
+  filter: drop-shadow(0 0 4px rgba(251,191,36,0.6));
+}
+
+.sun-arc__labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.sun-arc__rise,
+.sun-arc__set {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--warm);
+  font-weight: 600;
+}
+
+.sun-arc__daylen {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+/* Lunina faza — kompaktna vrstica */
+.moon-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.moon-pill__icon { font-size: 1.1rem; line-height: 1; }
+
+.moon-pill__name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.moon-pill__illum {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.moon-pill__next {
+  font-size: 0.68rem;
+  color: var(--muted);
+  margin-left: auto;
+}
+
+/* Lunin vpliv na plimo */
+.moon-tide {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+}
+
+.moon-tide--spring {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+}
+
+.moon-tide--neap {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--muted);
+}
+
+/* ——————————————————————————————————————
+   Lunina faza v plimski sekciji (napoved)
+   —————————————————————————————————————— */
+
+.moon-forecast-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 1rem;
+  margin: 0.5rem 0 0;
+  background: rgba(148, 163, 184, 0.05);
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.moon-forecast-pill__icon { font-size: 1.5rem; line-height: 1; }
+
+.moon-forecast-pill__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.moon-forecast-pill__name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.moon-forecast-pill__next {
+  font-size: 0.72rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* ——————————————————————————————————————
+   Kakovost zraka
+   —————————————————————————————————————— */
+
+.aq-content { padding: 0.75rem 1rem 0.5rem; }
+
+.aq-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background: rgba(52, 211, 153, 0.06);
+  border: 1px solid rgba(52, 211, 153, 0.15);
+}
+
+.aq-aqi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 52px;
+}
+
+.aq-aqi__val {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.aq-aqi__lbl {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.aq-bar-wrap { flex: 1; display: flex; flex-direction: column; gap: 0.4rem; }
+
+.aq-bar {
+  position: relative;
+  height: 6px;
+  background: rgba(148,163,184,0.12);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.aq-bar__fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.aq-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* AQI color classes */
+.aqi--good    .aq-aqi__val, .aqi--good    .aq-label { color: #34d399; }
+.aqi--fair    .aq-aqi__val, .aqi--fair    .aq-label { color: #a3e635; }
+.aqi--moderate .aq-aqi__val, .aqi--moderate .aq-label { color: #fbbf24; }
+.aqi--poor    .aq-aqi__val, .aqi--poor    .aq-label { color: #f97316; }
+.aqi--verypoor .aq-aqi__val, .aqi--verypoor .aq-label { color: #f43f5e; }
+.aqi--hazardous .aq-aqi__val, .aqi--hazardous .aq-label { color: #a855f7; }
+
+.aqi--good    .aq-bar__fill { background: #34d399; }
+.aqi--fair    .aq-bar__fill { background: #a3e635; }
+.aqi--moderate .aq-bar__fill { background: #fbbf24; }
+.aqi--poor    .aq-bar__fill { background: #f97316; }
+.aqi--verypoor .aq-bar__fill { background: #f43f5e; }
+.aqi--hazardous .aq-bar__fill { background: #a855f7; }
+
+.aq-pollutants {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+}
+
+.aq-poll {
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.aq-poll__lbl {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.aq-poll__bar {
+  height: 4px;
+  background: rgba(148,163,184,0.12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.aq-poll__fill {
+  height: 100%;
+  background: #34d399;
+  border-radius: 2px;
+}
+
+.aq-poll__fill--over { background: #f97316; }
+
+.aq-poll__val {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.aq-poll__val--over { color: #f97316; font-weight: 600; }
+
+/* ——————————————————————————————————————
+   Plima in oseka
+   —————————————————————————————————————— */
+
+.tide-content { padding: 0.75rem 1rem 0; }
+
+.tide-chart-wrap {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.tide-svg {
+  flex: 1;
+  height: 80px;
+  border-radius: 8px;
+  overflow: visible;
+}
+
+.tide-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 0.58rem;
+  color: var(--muted);
+  text-align: right;
+  min-width: 2.8rem;
+  padding: 2px 0;
+}
+
+.tide-extrema {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.tide-event {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 10px;
+}
+
+.tide-event--high { background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.18); }
+.tide-event--low  { background: rgba(148,163,184,0.06); border: 1px solid rgba(148,163,184,0.1); }
+
+.tide-event__icon { font-size: 1.1rem; line-height: 1; }
+
+.tide-event__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.tide-event__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tide-event__time {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.tide-event__level {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #38bdf8;
+  font-variant-numeric: tabular-nums;
+}
+
+.tide-note {
+  font-size: 0.62rem;
+  color: rgba(148,163,184,0.55);
+  margin: 0.25rem 0 0.5rem;
+  line-height: 1.4;
+}
+
+/* ——————————————————————————————————————
+   Rekordi in heatmap (records.html)
+   —————————————————————————————————————— */
+
+.main--records {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.records-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+}
+
+.record-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: rgba(148,163,184,0.05);
+  border: 1px solid rgba(148,163,184,0.1);
+}
+
+.record-item--hot  { border-color: rgba(244,63,94,0.3); background: rgba(244,63,94,0.06); }
+.record-item--cold { border-color: rgba(56,189,248,0.3); background: rgba(56,189,248,0.06); }
+.record-item--rain { border-color: rgba(52,211,153,0.3); background: rgba(52,211,153,0.06); }
+.record-item--wind { border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.06); }
+
+.record-item__icon { font-size: 1.1rem; line-height: 1; }
+
+.record-item__label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.record-item__val {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.record-item--hot  .record-item__val { color: var(--hot); }
+.record-item--cold .record-item__val { color: var(--cold); }
+.record-item--rain .record-item__val { color: var(--rain); }
+.record-item--wind .record-item__val { color: var(--warm); }
+
+.record-item__date {
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-top: 0.1rem;
+}
+
+/* Mesečna klimatologija */
+.monthly-climate {
+  padding: 0.5rem 0.75rem 0.75rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.monthly-climate::-webkit-scrollbar { display: none; }
+
+.climate-row {
+  display: flex;
+  gap: 0.3rem;
+  min-width: min-content;
+}
+
+.climate-month {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 46px;
+  padding: 0.5rem 0.25rem;
+  border-radius: 8px;
+  background: rgba(148,163,184,0.05);
+  border: 1px solid rgba(148,163,184,0.08);
+  flex-shrink: 0;
+}
+
+.climate-month__lbl {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.climate-month__max { font-size: 0.78rem; font-weight: 700; color: #f43f5e; }
+.climate-month__avg { font-size: 0.68rem; color: var(--warm); }
+.climate-month__min { font-size: 0.78rem; font-weight: 700; color: #38bdf8; }
+.climate-month__rain {
+  font-size: 0.62rem;
+  color: var(--rain);
+  margin-top: 0.1rem;
+}
+
+/* Temperature heatmap */
+.heatmap-card { overflow: hidden; }
+
+.heatmap-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.25rem 1rem 0.5rem;
+}
+
+.heatmap-year-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.filter-select--sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid rgba(148,163,184,0.2);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.heatmap-wrap {
+  padding: 0 0.75rem 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.heatmap-wrap::-webkit-scrollbar { display: none; }
+
+.heatmap-grid {
+  display: grid;
+  grid-template-rows: repeat(7, 11px);
+  grid-auto-flow: column;
+  gap: 2px;
+  width: max-content;
+  padding: 0.25rem 0;
+}
+
+.heatmap-month-labels {
+  display: flex;
+  gap: 0;
+  font-size: 0.55rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+  padding-left: 1px;
+  width: max-content;
+}
+
+.heatmap-dow-labels {
+  display: grid;
+  grid-template-rows: repeat(7, 11px);
+  gap: 2px;
+  font-size: 0.55rem;
+  color: var(--muted);
+  text-align: right;
+  padding-right: 4px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.heatmap-container {
+  display: flex;
+  gap: 0;
+}
+
+.heatmap-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: rgba(148,163,184,0.08);
+  cursor: default;
+  transition: opacity 0.1s;
+}
+
+.heatmap-cell:hover { opacity: 0.75; }
+
+.heatmap-cell--empty { background: transparent; }
+
+/* Temperature color scale */
+.heatmap-cell[data-t="freezing"]  { background: #1e3a5f; }
+.heatmap-cell[data-t="cold"]      { background: #1a6fa8; }
+.heatmap-cell[data-t="cool"]      { background: #38bdf8; }
+.heatmap-cell[data-t="mild"]      { background: #4ade80; }
+.heatmap-cell[data-t="warm"]      { background: #fbbf24; }
+.heatmap-cell[data-t="hot"]       { background: #f97316; }
+.heatmap-cell[data-t="scorching"] { background: #f43f5e; }
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 1rem 0.75rem;
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+.heatmap-legend__scale {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg,
+    #1e3a5f 0%, #1a6fa8 17%, #38bdf8 33%,
+    #4ade80 50%, #fbbf24 67%, #f97316 83%, #f43f5e 100%);
+}
+
+/* ——————————————————————————————————————
+   Navigation — 4 tabs
+   —————————————————————————————————————— */
+
+/* Z 4 tabicami zmanjšamo font labele */
+.bottom-nav__link {
+  font-size: 0.62rem;
+}
+
+.bottom-nav__svg {
+  width: 20px;
+  height: 20px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wind-compass__needle {
     transition: none;

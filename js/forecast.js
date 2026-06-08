@@ -3,8 +3,8 @@
  * https://open-meteo.com – brez API ključa, CORS-friendly
  */
 
-const LAT = 45.5547;
-const LON = 13.7282;
+const LAT = 45.4837; // Rakitovec
+const LON = 13.8806; // Rakitovec
 
 const WMO_ICONS = {
   0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
