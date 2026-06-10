@@ -185,13 +185,14 @@ export async function fetchLocationForecast(lat, lon) {
     hourly: [
       'temperature_2m', 'apparent_temperature', 'weather_code',
       'precipitation', 'precipitation_probability',
-      'wind_speed_10m', 'wind_gusts_10m', 'snowfall',
+      'wind_speed_10m', 'wind_gusts_10m',
+      'snowfall', 'snow_depth', 'freezinglevel_height',
     ].join(','),
     daily: [
       'weather_code', 'temperature_2m_max', 'temperature_2m_min',
       'precipitation_sum', 'precipitation_probability_max',
       'wind_speed_10m_max', 'wind_gusts_10m_max', 'uv_index_max',
-      'snowfall_sum',
+      'snowfall_sum', 'precipitation_hours',
     ].join(','),
     models: 'icon_seamless',   // ICON-D2 (2 km) kjer je na voljo, ICON-EU sicer
     timezone: 'auto',
@@ -225,7 +226,9 @@ export async function fetchLocationForecast(lat, lon) {
           precipProb: hourly.precipitation_probability?.[i] ?? null,
           wind:       hourly.wind_speed_10m?.[i]          ?? null,
           gust:       hourly.wind_gusts_10m?.[i]          ?? null,
-          snowfall:   hourly.snowfall?.[i]                ?? 0,
+          snowfall:   hourly.snowfall?.[i]           ?? 0,
+          snowDepth:  hourly.snow_depth?.[i]          ?? null,  // m
+          freezeLevel: hourly.freezinglevel_height?.[i] ?? null, // m asl
         };
       })
       .filter(h => h.time >= now),
@@ -239,7 +242,8 @@ export async function fetchLocationForecast(lat, lon) {
       windMax:   daily.wind_speed_10m_max?.[i]        ?? null,
       gustMax:   daily.wind_gusts_10m_max?.[i]        ?? null,
       uvMax:     daily.uv_index_max?.[i]              ?? null,
-      snow:      daily.snowfall_sum?.[i]              ?? 0,
+      snow:      daily.snowfall_sum?.[i]           ?? 0,
+      precipHrs: daily.precipitation_hours?.[i]    ?? null,
     })),
   };
 }
