@@ -79,7 +79,7 @@ function renderHourly(hours) {
 
   let lastDate = null;
   el.innerHTML = `<div class="hourly-scroll">${hours.map(h => {
-    const timeStr = h.time.toLocaleTimeString('sl-SI', { timeZone: 'auto', hour: '2-digit', minute: '2-digit' });
+    const timeStr = h.time.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' });
     const dateStr = h.time.toLocaleDateString('sl-SI', { weekday: 'short', day: 'numeric' });
     const dateKey = h.time.toDateString();
     const isNewDay = dateKey !== lastDate;
