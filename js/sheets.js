@@ -189,10 +189,33 @@ export async function fetchDayReadings(year, month, day) {
 
 export async function fetchMonthReadings(year, month) {
   const { start, end } = monthRange(year, month);
-  const [readings, initialPrecipTotal] = await Promise.all([
-    fetchReadingsRange(start, end, year),
-    fetchPrecipTotalBefore(start, year),
-  ]);
+
+  // Extend 1 day back to capture readings that are local-month but UTC-previous-day
+  // (e.g. local June 1 00:00–01:59 CEST = UTC May 31 22:00–23:59).
+  const extStart = new Date(start.getTime() - 24 * 3600_000);
+  const extYear  = extStart.getFullYear();
+
+  let allReadings = [];
+  if (extYear < year) {
+    // January: extStart is in the previous calendar year — query both sheets.
+    try { allReadings = await fetchReadingsRange(extStart, start, extYear); } catch { /* no prev year */ }
+    allReadings.push(...await fetchReadingsRange(start, end, year));
+  } else {
+    allReadings = await fetchReadingsRange(extStart, end, year);
+  }
+
+  // Split into boundary (pre-month) vs actual local-month readings.
+  const localFmt = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Ljubljana' });
+  const prefix   = `${year}-${String(month).padStart(2, '0')}`;
+  const preReadings = allReadings.filter(r => r.time && !localFmt.format(r.time).startsWith(prefix));
+  const readings    = allReadings.filter(r => r.time &&  localFmt.format(r.time).startsWith(prefix));
+
+  // Use last precipTotal seen before the local month as baseline; fall back to DB query.
+  const lastPre = preReadings.length ? preReadings.at(-1) : null;
+  const initialPrecipTotal = lastPre?.precipTotal != null
+    ? lastPre.precipTotal
+    : await fetchPrecipTotalBefore(extStart, extYear);
+
   return { readings, initialPrecipTotal };
 }
 

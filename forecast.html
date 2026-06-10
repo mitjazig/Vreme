@@ -42,6 +42,21 @@
 
     <main class="main main--forecast">
 
+      <!-- Napoved za mojo lokacijo -->
+      <section class="card loc-card" aria-label="Napoved za mojo lokacijo">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(167,139,250,0.15);color:#a78bfa" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          </span>
+          <div>
+            <h2 class="card__title">Moja lokacija</h2>
+            <p class="card__desc">Napoved za trenutno pozicijo</p>
+          </div>
+          <button id="loc-btn" class="btn btn--ghost loc-btn" type="button">📍 Pridobi napoved</button>
+        </div>
+        <div id="loc-content" class="loc-content"></div>
+      </section>
+
       <!-- 7-dnevna napoved -->
       <section class="card forecast-card" aria-label="7-dnevna napoved">
         <div class="card__head">
@@ -102,6 +117,22 @@
           </div>
         </div>
         <div id="aq-content" class="aq-content">
+          <p class="forecast-loading">Nalagam…</p>
+        </div>
+      </section>
+
+      <!-- Požarna nevarnost -->
+      <section class="card fire-card" aria-label="Požarna nevarnost">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(251,146,60,0.15);color:#fb923c" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C9 6 6 8.5 6 13a6 6 0 0 0 12 0c0-2.5-1.5-4.5-3-6-0.5 2-1.5 3-2 3.5C12.5 9 12 6 12 2zm0 16a3 3 0 0 1-3-3c0-2 1.5-3.5 2-5 .5 1.5 1.5 2.5 1 4 1-.5 2-2 2-3 .5 1 1 2 1 3a3 3 0 0 1-3 4z"/></svg>
+          </span>
+          <div>
+            <h2 class="card__title">Požarna nevarnost</h2>
+            <p class="card__desc">FWI · Kras · 7-dnevna napoved</p>
+          </div>
+        </div>
+        <div id="fire-content" class="fire-content">
           <p class="forecast-loading">Nalagam…</p>
         </div>
       </section>
@@ -168,6 +199,32 @@
         <!-- Leaflet mini mapa -->
         <div class="radar-map-wrap">
           <div id="lightning-map" class="radar-map"></div>
+        </div>
+      </section>
+
+      <!-- ARSO WebMet – verjetnostna napoved -->
+      <section class="card webmet-card" aria-label="Verjetnostna napoved ARSO">
+        <div class="card__head">
+          <span class="card__icon card__icon--warm" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </span>
+          <div>
+            <h2 class="card__title">Verjetnostna napoved</h2>
+            <p class="card__desc">ARSO WebMet · JZ Slovenija · ECMWF ansambel</p>
+          </div>
+        </div>
+        <div class="webmet-wrap">
+          <p class="webmet-desc">Ansambel napoved (ECMWF EPS) za jugozahodno Slovenijo — temperatura, padavine, veter z verjetnostnimi razponi za naslednjih 10 dni.</p>
+          <a
+            href="https://meteo.arso.gov.si/met/sl/app/webmet/#webmet=vUHcs9WYkN3LtVGdl92LhBHcvcXZi1WZ09Cc1p2cvAncvd2LyVWYs12Lm9mclNWYzR3Lp5Wa05CetxGfzx2b2VmbpFGfm9mclNWYzRHf7R2btFWaupzJzx2b2VmbpF2JsAXYyFWblRXZypzJNFEUnwCd5BXZ6cSZwNnZvJXZjF2c0dSf"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="webmet-btn"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Odpri verjetnostno napoved ARSO
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
         </div>
       </section>
 

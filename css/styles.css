@@ -2060,6 +2060,219 @@ body.is-loading .stat-pill {
   height: 20px;
 }
 
+/* ——————————————————————————————————————
+   ARSO WEBMET IFRAME
+   —————————————————————————————————————— */
+
+.webmet-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.webmet-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.webmet-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.1rem;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--warm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+  align-self: flex-start;
+}
+.webmet-btn:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+/* ——————————————————————————————————————
+   POŽARNA NEVARNOST (FWI)
+   —————————————————————————————————————— */
+
+.fwi-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.85rem 0 0.75rem;
+  border-bottom: 1px solid var(--card-border);
+  margin-bottom: 0.75rem;
+}
+.fwi-hero__val {
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 1;
+  min-width: 3rem;
+  letter-spacing: -0.03em;
+}
+.fwi-hero__body { flex: 1; }
+.fwi-hero__label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.55rem;
+}
+
+/* FWI segmented bar */
+.fwi-bar-wrap { width: 100%; }
+.fwi-bar { position: relative; margin-bottom: 0.25rem; }
+.fwi-bar__track {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  gap: 1px;
+}
+.fwi-bar__seg { flex: 1; }
+.fwi-bar__seg--low      { background: #22c55e; }
+.fwi-bar__seg--moderate { background: #eab308; }
+.fwi-bar__seg--high     { background: #f97316; }
+.fwi-bar__seg--veryhigh { background: #ef4444; }
+.fwi-bar__seg--extreme  { background: #a855f7; }
+.fwi-bar__marker {
+  position: absolute;
+  top: -2px;
+  width: 3px;
+  height: 12px;
+  background: #fff;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 4px rgba(0,0,0,0.6);
+  transition: left 0.3s ease;
+}
+.fwi-bar__labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.6rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+
+/* FWI colour themes */
+.fwi--low      .fwi-hero__val, .fwi--low      .fwi-hero__label { color: #22c55e; }
+.fwi--moderate .fwi-hero__val, .fwi--moderate .fwi-hero__label { color: #eab308; }
+.fwi--high     .fwi-hero__val, .fwi--high     .fwi-hero__label { color: #f97316; }
+.fwi--veryhigh .fwi-hero__val, .fwi--veryhigh .fwi-hero__label { color: #ef4444; }
+.fwi--extreme  .fwi-hero__val, .fwi--extreme  .fwi-hero__label { color: #a855f7; }
+
+/* FWI week strip */
+.fwi-week {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+.fwi-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 3.2rem;
+  padding: 0.45rem 0.3rem;
+  background: rgba(255,255,255,0.04);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--card-border);
+}
+.fwi-day__lbl { font-size: 0.65rem; color: var(--muted); text-transform: capitalize; }
+.fwi-day__val { font-size: 1.05rem; font-weight: 700; }
+.fwi-day__tag { font-size: 0.55rem; color: var(--muted); text-align: center; }
+
+.fwi-day.fwi--low      .fwi-day__val { color: #22c55e; }
+.fwi-day.fwi--moderate .fwi-day__val { color: #eab308; }
+.fwi-day.fwi--high     .fwi-day__val { color: #f97316; }
+.fwi-day.fwi--veryhigh .fwi-day__val { color: #ef4444; }
+.fwi-day.fwi--extreme  .fwi-day__val { color: #a855f7; }
+
+/* ——————————————————————————————————————
+   NAPOVED ZA MOJO LOKACIJO
+   —————————————————————————————————————— */
+
+.loc-btn {
+  margin-left: auto;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.loc-content {
+  padding-top: 0.5rem;
+}
+
+.loc-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 0.65rem;
+}
+.loc-header__name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.loc-current {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--card-border);
+}
+.loc-current__icon { font-size: 1.8rem; }
+.loc-current__temp {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+.loc-current__sub {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.loc-days {
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.loc-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 3.4rem;
+  padding: 0.5rem 0.35rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+}
+.loc-day__lbl { font-size: 0.65rem; color: var(--muted); }
+.loc-day__icon { font-size: 1.2rem; }
+.loc-day__temps { font-size: 0.85rem; font-weight: 600; }
+.loc-day__min { font-weight: 400; color: var(--muted); }
+.loc-day__rain { font-size: 0.65rem; color: var(--rain); }
+.loc-day__rain--none { color: var(--muted); }
+
+.forecast-loading--err { color: var(--hot); }
+
 @media (prefers-reduced-motion: reduce) {
   .wind-compass__needle {
     transition: none;

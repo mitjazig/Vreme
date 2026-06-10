@@ -1,5 +1,5 @@
 import { initPwaUpdates } from './pwa-update.js';
-import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides } from './forecast.js';
+import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides, fetchFireDanger, fetchLocationForecast, reverseGeocode } from './forecast.js';
 import { moonPhase, STATION_LAT, STATION_LON } from './astro.js';
 import { LightningTracker } from './lightning.js';
 import { fetchAlerts, alertCls, alertLabel } from './alerts.js';
@@ -269,6 +269,136 @@ function renderAirQuality(aq) {
     <p class="tide-note">Vir: Open-Meteo Air Quality API · ${new Date().toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })}</p>`;
 }
 
+/** —— Požarna nevarnost (FWI) —— */
+function fwiInfo(fwi) {
+  if (fwi == null) return { label: '—',          cls: '',              bar: 0   };
+  if (fwi <  5.4)  return { label: 'Nizka',       cls: 'fwi--low',      bar: Math.min(fwi / 5.4 * 20, 20) };
+  if (fwi < 11.2)  return { label: 'Zmerna',      cls: 'fwi--moderate', bar: 20 + (fwi - 5.4)  / 5.8  * 20 };
+  if (fwi < 21.3)  return { label: 'Visoka',      cls: 'fwi--high',     bar: 40 + (fwi - 11.2) / 10.1 * 20 };
+  if (fwi < 38.0)  return { label: 'Zelo visoka', cls: 'fwi--veryhigh', bar: 60 + (fwi - 21.3) / 16.7 * 20 };
+  return              { label: 'Ekstremna',        cls: 'fwi--extreme',  bar: Math.min(80 + (fwi - 38) / 20 * 20, 100) };
+}
+
+function renderFireDanger(days) {
+  const el = document.getElementById('fire-content');
+  if (!el) return;
+  if (!days?.length || days.every(d => d.fwi == null)) {
+    el.innerHTML = '<p class="forecast-loading">Podatki o požarni nevarnosti niso na voljo.</p>';
+    return;
+  }
+
+  const DAY_SL = ['ned', 'pon', 'tor', 'sre', 'čet', 'pet', 'sob'];
+  const today = days[0];
+  const info = fwiInfo(today.fwi);
+
+  el.innerHTML = `
+    <div class="fwi-hero ${info.cls}">
+      <div class="fwi-hero__val">${today.fwi != null ? today.fwi.toFixed(1) : '—'}</div>
+      <div class="fwi-hero__body">
+        <span class="fwi-hero__label">FWI — ${info.label}</span>
+        <div class="fwi-bar-wrap">
+          <div class="fwi-bar">
+            <div class="fwi-bar__track">
+              <span class="fwi-bar__seg fwi-bar__seg--low"></span>
+              <span class="fwi-bar__seg fwi-bar__seg--moderate"></span>
+              <span class="fwi-bar__seg fwi-bar__seg--high"></span>
+              <span class="fwi-bar__seg fwi-bar__seg--veryhigh"></span>
+              <span class="fwi-bar__seg fwi-bar__seg--extreme"></span>
+            </div>
+            <div class="fwi-bar__marker" style="left:${info.bar.toFixed(1)}%"></div>
+          </div>
+          <div class="fwi-bar__labels"><span>Nizka</span><span>Zmerna</span><span>Visoka</span><span>Zelo vis.</span><span>Ekstremna</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="fwi-week">
+      ${days.map((d, i) => {
+        const inf = fwiInfo(d.fwi);
+        const lbl = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : DAY_SL[d.date.getDay()];
+        return `<div class="fwi-day ${inf.cls}">
+          <span class="fwi-day__lbl">${lbl}</span>
+          <span class="fwi-day__val">${d.fwi != null ? d.fwi.toFixed(0) : '—'}</span>
+          <span class="fwi-day__tag">${inf.label}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <p class="tide-note">FWI (Canadian Fire Weather Index) · Open-Meteo · višja vrednost = večja nevarnost</p>`;
+}
+
+/** —— Napoved za mojo lokacijo —— */
+function renderLocationForecast(data, locationName, lat, lon) {
+  const el = document.getElementById('loc-content');
+  if (!el) return;
+
+  const DAY_SL = ['ned', 'pon', 'tor', 'sre', 'čet', 'pet', 'sob'];
+  const { current, daily } = data;
+  const locLabel = locationName ?? `${lat.toFixed(3)}°N, ${lon.toFixed(3)}°E`;
+
+  el.innerHTML = `
+    <div class="loc-header">
+      <span class="loc-header__pin">📍</span>
+      <span class="loc-header__name">${locLabel}</span>
+    </div>
+    <div class="loc-current">
+      <span class="loc-current__icon" title="${wmoLabel(current.code)}">${wmoIcon(current.code)}</span>
+      <span class="loc-current__temp">${current.temp != null ? Math.round(current.temp) + '°C' : '—'}</span>
+      <span class="loc-current__sub">${wmoLabel(current.code)}${current.humidity != null ? ' · ' + Math.round(current.humidity) + '% vl.' : ''}${current.wind != null ? ' · 💨 ' + current.wind.toFixed(0) + ' km/h' : ''}</span>
+    </div>
+    <div class="loc-days">
+      ${daily.map((d, i) => {
+        const lbl = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : DAY_SL[d.date.getDay()];
+        const hasRain = d.rain != null && d.rain > 0.1;
+        return `<div class="loc-day">
+          <span class="loc-day__lbl">${lbl}</span>
+          <span class="loc-day__icon">${wmoIcon(d.code)}</span>
+          <span class="loc-day__temps"><b>${d.max != null ? Math.round(d.max) + '°' : '—'}</b> <span class="loc-day__min">${d.min != null ? Math.round(d.min) + '°' : ''}</span></span>
+          ${hasRain ? `<span class="loc-day__rain">${d.rain.toFixed(1)} mm</span>` : '<span class="loc-day__rain loc-day__rain--none">·</span>'}
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+async function initLocationForecast() {
+  const btn = document.getElementById('loc-btn');
+  const el  = document.getElementById('loc-content');
+  if (!btn || !el) return;
+
+  btn.addEventListener('click', async () => {
+    if (!navigator.geolocation) {
+      el.innerHTML = '<p class="forecast-loading">Geolokacija ni podprta v tem brskalniku.</p>';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Pridobivam lokacijo…';
+    el.innerHTML = '<p class="forecast-loading">Nalagam…</p>';
+
+    try {
+      const pos = await new Promise((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10_000 })
+      );
+      const { latitude: lat, longitude: lon } = pos.coords;
+
+      const [data, locationName] = await Promise.all([
+        fetchLocationForecast(lat, lon),
+        reverseGeocode(lat, lon),
+      ]);
+
+      renderLocationForecast(data, locationName, lat, lon);
+      btn.textContent = '📍 Posodobi lokacijo';
+    } catch (err) {
+      const msg = err.code === 1 ? 'Dostop do lokacije zavrnjen.'
+                : err.code === 2 ? 'Lokacija ni na voljo.'
+                : err.code === 3 ? 'Prekoračen čas za pridobitev lokacije.'
+                : `Napaka: ${err.message}`;
+      el.innerHTML = `<p class="forecast-loading forecast-loading--err">${msg}</p>`;
+      btn.textContent = '📍 Napoved za mojo lokacijo';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 /** —— Radar zemljevid (Leaflet + RainViewer) —— */
 let radarMap = null;
 let radarFrames = [];
@@ -445,12 +575,13 @@ function initLightningMap() {
 async function load() {
   setStatus('Nalagam napoved…');
   try {
-    const [forecast, hourly, alerts, sea, aq] = await Promise.allSettled([
+    const [forecast, hourly, alerts, sea, aq, fire] = await Promise.allSettled([
       fetchForecast(),
       fetchHourlyForecast(),
       fetchAlerts(),
       fetchSeaTemp(),
       fetchAirQuality(),
+      fetchFireDanger(),
     ]);
 
     if (forecast.status === 'fulfilled') renderForecast(forecast.value);
@@ -466,6 +597,9 @@ async function load() {
 
     if (aq.status === 'fulfilled') renderAirQuality(aq.value);
     else renderAirQuality(null);
+
+    if (fire.status === 'fulfilled') renderFireDanger(fire.value);
+    else renderFireDanger(null);
 
     // Plima se računa lokalno, ne zahteva API klica
     renderTides();
@@ -490,6 +624,9 @@ async function init() {
 
   await load();
   setInterval(load, 30 * 60 * 1000);
+
+  // Napoved za lokacijo
+  initLocationForecast();
 
   // Leaflet + Strele
   initLightningMap();

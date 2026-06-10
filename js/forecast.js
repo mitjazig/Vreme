@@ -154,6 +154,70 @@ export async function fetchAirQuality() {
   };
 }
 
+/** ——————— Požarna nevarnost (FWI) ——————— */
+export async function fetchFireDanger() {
+  const params = new URLSearchParams({
+    latitude: LAT,
+    longitude: LON,
+    daily: 'fire_weather_index',
+    timezone: 'Europe/Ljubljana',
+    forecast_days: '7',
+  });
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+  if (!res.ok) throw new Error(`Fire API HTTP ${res.status}`);
+  const { daily } = await res.json();
+  return (daily.time ?? []).map((date, i) => ({
+    date: new Date(date),
+    fwi: daily.fire_weather_index?.[i] ?? null,
+  }));
+}
+
+/** ——————— Napoved za poljubno lokacijo ——————— */
+export async function fetchLocationForecast(lat, lon) {
+  const params = new URLSearchParams({
+    latitude: lat,
+    longitude: lon,
+    current: ['temperature_2m', 'weather_code', 'wind_speed_10m', 'relative_humidity_2m'].join(','),
+    daily: ['weather_code', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum', 'precipitation_probability_max'].join(','),
+    timezone: 'auto',
+    forecast_days: '4',
+  });
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+  if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
+  const { current, daily } = await res.json();
+  return {
+    current: {
+      temp: current?.temperature_2m ?? null,
+      code: current?.weather_code ?? null,
+      wind: current?.wind_speed_10m ?? null,
+      humidity: current?.relative_humidity_2m ?? null,
+    },
+    daily: (daily?.time ?? []).map((date, i) => ({
+      date: new Date(date),
+      code: daily.weather_code?.[i] ?? null,
+      max: daily.temperature_2m_max?.[i] ?? null,
+      min: daily.temperature_2m_min?.[i] ?? null,
+      rain: daily.precipitation_sum?.[i] ?? 0,
+      rainProb: daily.precipitation_probability_max?.[i] ?? null,
+    })),
+  };
+}
+
+export async function reverseGeocode(lat, lon) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`,
+      { headers: { 'Accept-Language': 'sl' } }
+    );
+    if (!res.ok) return null;
+    const j = await res.json();
+    const a = j.address ?? {};
+    return a.city ?? a.town ?? a.village ?? a.municipality ?? a.county ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchForecast() {
   const params = new URLSearchParams({
     latitude: LAT,
