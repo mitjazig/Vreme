@@ -172,33 +172,74 @@ export async function fetchFireDanger() {
   }));
 }
 
-/** ——————— Napoved za poljubno lokacijo ——————— */
+/** ——————— Napoved za poljubno lokacijo (7 dni + urna) ——————— */
 export async function fetchLocationForecast(lat, lon) {
   const params = new URLSearchParams({
     latitude: lat,
     longitude: lon,
-    current: ['temperature_2m', 'weather_code', 'wind_speed_10m', 'relative_humidity_2m'].join(','),
-    daily: ['weather_code', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum', 'precipitation_probability_max'].join(','),
+    current: [
+      'temperature_2m', 'apparent_temperature', 'weather_code',
+      'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m',
+      'relative_humidity_2m', 'surface_pressure',
+    ].join(','),
+    hourly: [
+      'temperature_2m', 'apparent_temperature', 'weather_code',
+      'precipitation', 'precipitation_probability',
+      'wind_speed_10m', 'wind_gusts_10m', 'snowfall',
+    ].join(','),
+    daily: [
+      'weather_code', 'temperature_2m_max', 'temperature_2m_min',
+      'precipitation_sum', 'precipitation_probability_max',
+      'wind_speed_10m_max', 'wind_gusts_10m_max', 'uv_index_max',
+      'snowfall_sum',
+    ].join(','),
+    models: 'icon_seamless',   // ICON-D2 (2 km) kjer je na voljo, ICON-EU sicer
     timezone: 'auto',
-    forecast_days: '4',
+    forecast_days: '7',
   });
   const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
   if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
-  const { current, daily } = await res.json();
+  const { current, hourly, daily } = await res.json();
+
+  const now = new Date();
   return {
     current: {
-      temp: current?.temperature_2m ?? null,
-      code: current?.weather_code ?? null,
-      wind: current?.wind_speed_10m ?? null,
+      temp:     current?.temperature_2m       ?? null,
+      feel:     current?.apparent_temperature ?? null,
+      code:     current?.weather_code         ?? null,
+      wind:     current?.wind_speed_10m       ?? null,
+      windDir:  current?.wind_direction_10m   ?? null,
+      gust:     current?.wind_gusts_10m       ?? null,
       humidity: current?.relative_humidity_2m ?? null,
+      pressure: current?.surface_pressure     ?? null,
     },
+    hourly: (hourly?.time ?? [])
+      .map((t, i) => {
+        const time = new Date(t);
+        return {
+          time,
+          temp:       hourly.temperature_2m?.[i]          ?? null,
+          feel:       hourly.apparent_temperature?.[i]    ?? null,
+          code:       hourly.weather_code?.[i]            ?? null,
+          precip:     hourly.precipitation?.[i]           ?? 0,
+          precipProb: hourly.precipitation_probability?.[i] ?? null,
+          wind:       hourly.wind_speed_10m?.[i]          ?? null,
+          gust:       hourly.wind_gusts_10m?.[i]          ?? null,
+          snowfall:   hourly.snowfall?.[i]                ?? 0,
+        };
+      })
+      .filter(h => h.time >= now),
     daily: (daily?.time ?? []).map((date, i) => ({
-      date: new Date(date),
-      code: daily.weather_code?.[i] ?? null,
-      max: daily.temperature_2m_max?.[i] ?? null,
-      min: daily.temperature_2m_min?.[i] ?? null,
-      rain: daily.precipitation_sum?.[i] ?? 0,
-      rainProb: daily.precipitation_probability_max?.[i] ?? null,
+      date:      new Date(date),
+      code:      daily.weather_code?.[i]              ?? null,
+      max:       daily.temperature_2m_max?.[i]        ?? null,
+      min:       daily.temperature_2m_min?.[i]        ?? null,
+      rain:      daily.precipitation_sum?.[i]         ?? 0,
+      rainProb:  daily.precipitation_probability_max?.[i] ?? null,
+      windMax:   daily.wind_speed_10m_max?.[i]        ?? null,
+      gustMax:   daily.wind_gusts_10m_max?.[i]        ?? null,
+      uvMax:     daily.uv_index_max?.[i]              ?? null,
+      snow:      daily.snowfall_sum?.[i]              ?? 0,
     })),
   };
 }
