@@ -72,6 +72,65 @@ function renderDaily(days) {
   }).join('');
 }
 
+/** Snežna napoved */
+function renderSnow(daily, hourly) {
+  const el = document.getElementById('loc-snow');
+  if (!el) return;
+
+  const hasAnySnow = daily.some(d => (d.snow ?? 0) > 0.1);
+
+  // Trenutna globina snega in meja sneženja (iz prve urne vrednosti)
+  const nowH = hourly[0];
+  const snowDepthCm = nowH?.snowDepth != null ? (nowH.snowDepth * 100).toFixed(0) : null;
+  const freezeLevel = nowH?.freezeLevel != null ? Math.round(nowH.freezeLevel) : null;
+
+  // Meja sneženja v naslednjih 24h (min/max)
+  const next24 = hourly.slice(0, 24).filter(h => h.freezeLevel != null);
+  const freezeMin = next24.length ? Math.min(...next24.map(h => h.freezeLevel)) : null;
+  const freezeMax = next24.length ? Math.max(...next24.map(h => h.freezeLevel)) : null;
+
+  // Barva za globino snega
+  const depthColor = snowDepthCm > 100 ? '#a5f3fc'
+                   : snowDepthCm > 30  ? '#7dd3fc'
+                   : snowDepthCm > 5   ? '#bae6fd'
+                   : 'var(--muted)';
+
+  el.innerHTML = `
+    <div class="snow-header">
+      ${snowDepthCm != null ? `
+        <div class="snow-depth">
+          <span class="snow-depth__val" style="color:${depthColor}">${snowDepthCm} cm</span>
+          <span class="snow-depth__lbl">globina snega</span>
+        </div>` : ''}
+      ${freezeLevel != null ? `
+        <div class="snow-freeze">
+          <span class="snow-freeze__val">${freezeLevel.toLocaleString()} m</span>
+          <span class="snow-freeze__lbl">meja sneženja</span>
+          ${freezeMin != null && freezeMin !== freezeMax
+            ? `<span class="snow-freeze__range">${Math.round(freezeMin).toLocaleString()}–${Math.round(freezeMax).toLocaleString()} m / 24h</span>`
+            : ''}
+        </div>` : ''}
+    </div>
+
+    ${hasAnySnow ? `
+    <div class="snow-days">
+      ${daily.filter(d => (d.snow ?? 0) > 0.1).map((d, i) => {
+        const lbl = i === 0 && d.date.toDateString() === new Date().toDateString()
+          ? 'Danes' : DAY_SL[d.date.getDay()] + ' ' + d.date.getDate() + '.';
+        const barW = Math.min(100, (d.snow / 50) * 100);
+        return `<div class="snow-day">
+          <span class="snow-day__lbl">${lbl}</span>
+          <div class="snow-day__bar-wrap">
+            <div class="snow-day__bar" style="width:${barW.toFixed(0)}%"></div>
+          </div>
+          <span class="snow-day__val">❄️ ${d.snow.toFixed(1)} cm</span>
+        </div>`;
+      }).join('')}
+    </div>` : `<p class="snow-none">Ni pričakovanega snega v naslednjih 7 dneh.</p>`}
+
+    <p class="tide-note">Meja sneženja = nadmorska višina 0°C · ICON-D2</p>`;
+}
+
 /** Urna napoved */
 function renderHourly(hours) {
   const el = $('loc-hourly');
@@ -131,6 +190,7 @@ async function loadForecast(lat, lon, nameHint = null) {
     document.title = `${name} – Vreme`;
 
     renderCurrent(data.current, name);
+    renderSnow(data.daily, data.hourly);
     renderDaily(data.daily);
     renderHourly(data.hourly);
     showForecast();

@@ -2155,6 +2155,90 @@ body.is-loading .stat-pill {
 .hourly-item__feel { font-size: 0.68rem; color: var(--muted); }
 .hourly-item__wind { font-size: 0.68rem; color: var(--muted); }
 
+/* ——————————————————————————————————————
+   SNEŽNA NAPOVED
+   —————————————————————————————————————— */
+
+.snow-header {
+  display: flex;
+  gap: 1.5rem;
+  padding: 0.5rem 0 0.85rem;
+  border-bottom: 1px solid var(--card-border);
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.snow-depth, .snow-freeze {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.snow-depth__val {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.snow-depth__lbl, .snow-freeze__lbl {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.snow-freeze__val {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: #7dd3fc;
+}
+.snow-freeze__range {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+/* Dnevne akumulacije */
+.snow-days {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+}
+.snow-day {
+  display: grid;
+  grid-template-columns: 4rem 1fr 5rem;
+  align-items: center;
+  gap: 0.6rem;
+}
+.snow-day__lbl {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+.snow-day__bar-wrap {
+  height: 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.snow-day__bar {
+  height: 100%;
+  background: linear-gradient(90deg, #7dd3fc, #a5f3fc);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.snow-day__val {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #bae6fd;
+  text-align: right;
+}
+.snow-none {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.25rem 0;
+}
+
 /* Gumb za spremembo lokacije */
 .loc-change-btn {
   display: block;
