@@ -52,22 +52,27 @@ function renderDaily(days) {
   const el = $('loc-daily');
   if (!el) return;
   el.innerHTML = days.map((d, i) => {
-    const label  = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : DAY_SL[d.date.getDay()];
+    const label   = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : DAY_SL[d.date.getDay()] + ' ' + d.date.getDate() + '.';
     const hasRain = (d.rain ?? 0) > 0.1;
     const hasSnow = (d.snow ?? 0) > 0.1;
-    const uvStr  = d.uvMax != null ? `UV ${d.uvMax.toFixed(0)}` : '';
-    return `<div class="forecast-day forecast-day--wide">
-      <span class="forecast-day__lbl">${label}</span>
-      <span class="forecast-day__icon" title="${wmoLabel(d.code)}">${wmoIcon(d.code)}</span>
-      <span class="forecast-day__temps">
-        <span class="forecast-day__max">${d.max != null ? Math.round(d.max) + '°' : '—'}</span>
-        <span class="forecast-day__min">${d.min != null ? Math.round(d.min) + '°' : ''}</span>
+    const precip  = hasSnow ? `❄️ ${d.snow.toFixed(0)} cm`
+                  : hasRain ? `🌧 ${d.rain.toFixed(1)} mm${d.rainProb ? ` · ${d.rainProb}%` : ''}`
+                  : '';
+    const wind    = d.gustMax != null ? `💨 ${Math.round(d.gustMax)} km/h` : '';
+    const uv      = d.uvMax != null   ? `UV ${Math.round(d.uvMax)}` : '';
+
+    return `<div class="loc-day-row">
+      <span class="loc-day-row__lbl">${label}</span>
+      <span class="loc-day-row__icon" title="${wmoLabel(d.code)}">${wmoIcon(d.code)}</span>
+      <span class="loc-day-row__temps">
+        <b>${d.max != null ? Math.round(d.max) + '°' : '—'}</b>
+        <span class="loc-day-row__min">${d.min != null ? Math.round(d.min) + '°' : ''}</span>
       </span>
-      <span class="forecast-day__rain ${!hasRain && !hasSnow ? 'forecast-day__rain--none' : ''}">
-        ${hasSnow ? `❄️ ${d.snow.toFixed(0)} cm` : hasRain ? `🌧 ${d.rain.toFixed(1)} mm${d.rainProb ? `<br><small>${d.rainProb}%</small>` : ''}` : '·'}
+      <span class="loc-day-row__extra">
+        ${precip ? `<span class="loc-day-row__tag loc-day-row__tag--precip">${precip}</span>` : ''}
+        ${wind   ? `<span class="loc-day-row__tag loc-day-row__tag--wind">${wind}</span>` : ''}
+        ${uv     ? `<span class="loc-day-row__tag loc-day-row__tag--uv">${uv}</span>` : ''}
       </span>
-      ${d.gustMax != null ? `<span class="forecast-day__wind">💨 ${d.gustMax.toFixed(0)}</span>` : '<span></span>'}
-      ${uvStr ? `<span class="forecast-day__uv">${uvStr}</span>` : '<span></span>'}
     </div>`;
   }).join('');
 }
@@ -79,55 +84,39 @@ function renderSnow(daily, hourly) {
 
   const hasAnySnow = daily.some(d => (d.snow ?? 0) > 0.1);
 
-  // Trenutna globina snega in meja sneženja (iz prve urne vrednosti)
   const nowH = hourly[0];
-  const snowDepthCm = nowH?.snowDepth != null ? (nowH.snowDepth * 100).toFixed(0) : null;
+  const snowDepthCm = nowH?.snowDepth != null ? Math.round(nowH.snowDepth * 100) : null;
   const freezeLevel = nowH?.freezeLevel != null ? Math.round(nowH.freezeLevel) : null;
 
-  // Meja sneženja v naslednjih 24h (min/max)
   const next24 = hourly.slice(0, 24).filter(h => h.freezeLevel != null);
-  const freezeMin = next24.length ? Math.min(...next24.map(h => h.freezeLevel)) : null;
-  const freezeMax = next24.length ? Math.max(...next24.map(h => h.freezeLevel)) : null;
+  const freezeMin = next24.length ? Math.round(Math.min(...next24.map(h => h.freezeLevel))) : null;
+  const freezeMax = next24.length ? Math.round(Math.max(...next24.map(h => h.freezeLevel))) : null;
 
-  // Barva za globino snega
-  const depthColor = snowDepthCm > 100 ? '#a5f3fc'
-                   : snowDepthCm > 30  ? '#7dd3fc'
-                   : snowDepthCm > 5   ? '#bae6fd'
-                   : 'var(--muted)';
+  const pills = [];
+  if (snowDepthCm != null && snowDepthCm > 0)
+    pills.push(`<span class="snow-pill snow-pill--depth">❄️ ${snowDepthCm} cm na tleh</span>`);
+  if (freezeLevel != null) {
+    const rangeStr = (freezeMin != null && freezeMax != null && freezeMin !== freezeMax)
+      ? ` (${freezeMin.toLocaleString()}–${freezeMax.toLocaleString()} m / 24h)`
+      : '';
+    pills.push(`<span class="snow-pill snow-pill--freeze">🌡️ Meja: ${freezeLevel.toLocaleString()} m${rangeStr}</span>`);
+  }
 
   el.innerHTML = `
-    <div class="snow-header">
-      ${snowDepthCm != null ? `
-        <div class="snow-depth">
-          <span class="snow-depth__val" style="color:${depthColor}">${snowDepthCm} cm</span>
-          <span class="snow-depth__lbl">globina snega</span>
-        </div>` : ''}
-      ${freezeLevel != null ? `
-        <div class="snow-freeze">
-          <span class="snow-freeze__val">${freezeLevel.toLocaleString()} m</span>
-          <span class="snow-freeze__lbl">meja sneženja</span>
-          ${freezeMin != null && freezeMin !== freezeMax
-            ? `<span class="snow-freeze__range">${Math.round(freezeMin).toLocaleString()}–${Math.round(freezeMax).toLocaleString()} m / 24h</span>`
-            : ''}
-        </div>` : ''}
-    </div>
-
+    ${pills.length ? `<div class="snow-pills">${pills.join('')}</div>` : ''}
     ${hasAnySnow ? `
     <div class="snow-days">
-      ${daily.filter(d => (d.snow ?? 0) > 0.1).map((d, i) => {
-        const lbl = i === 0 && d.date.toDateString() === new Date().toDateString()
+      ${daily.filter(d => (d.snow ?? 0) > 0.1).map(d => {
+        const lbl = d.date.toDateString() === new Date().toDateString()
           ? 'Danes' : DAY_SL[d.date.getDay()] + ' ' + d.date.getDate() + '.';
-        const barW = Math.min(100, (d.snow / 50) * 100);
+        const barW = Math.min(100, (d.snow / 30) * 100);
         return `<div class="snow-day">
           <span class="snow-day__lbl">${lbl}</span>
-          <div class="snow-day__bar-wrap">
-            <div class="snow-day__bar" style="width:${barW.toFixed(0)}%"></div>
-          </div>
+          <div class="snow-day__bar-wrap"><div class="snow-day__bar" style="width:${barW.toFixed(0)}%"></div></div>
           <span class="snow-day__val">❄️ ${d.snow.toFixed(1)} cm</span>
         </div>`;
       }).join('')}
-    </div>` : `<p class="snow-none">Ni pričakovanega snega v naslednjih 7 dneh.</p>`}
-
+    </div>` : `<p class="snow-none">Ni pričakovanega snega v 7 dneh.</p>`}
     <p class="tide-note">Meja sneženja = nadmorska višina 0°C · ICON-D2</p>`;
 }
 
@@ -139,27 +128,34 @@ function renderHourly(hours) {
   let lastDate = null;
   el.innerHTML = `<div class="hourly-scroll">${hours.map(h => {
     const timeStr = h.time.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' });
-    const dateStr = h.time.toLocaleDateString('sl-SI', { weekday: 'short', day: 'numeric' });
+    const dateStr = h.time.toLocaleDateString('sl-SI', { weekday: 'long', day: 'numeric', month: 'short' });
     const dateKey = h.time.toDateString();
     const isNewDay = dateKey !== lastDate;
     if (isNewDay) lastDate = dateKey;
 
-    const hasSnow = (h.snowfall ?? 0) > 0;
-    const hasPrecip = (h.precip ?? 0) > 0 || hasSnow;
+    const hasSnow  = (h.snowfall ?? 0) > 0.05;
+    const hasPrecip = (h.precip ?? 0) > 0.05 || hasSnow;
+    const feelDiff = h.feel != null && h.temp != null && Math.abs(h.feel - h.temp) >= 2;
+
+    const tempStr = h.temp != null
+      ? `${Math.round(h.temp)}°${feelDiff ? `<span class="hourly-feel"> (${Math.round(h.feel)}°)</span>` : ''}`
+      : '—';
+
+    const precipStr = hasPrecip
+      ? `${hasSnow ? '❄️' : '🌧'} ${h.precip > 0 ? h.precip.toFixed(1) + ' mm' : ''}${h.precipProb ? ` ${h.precipProb}%` : ''}`
+      : '';
+
+    const windStr = h.wind != null ? `💨 ${Math.round(h.wind)}` : '';
 
     return `${isNewDay ? `<div class="hourly-day-sep">${dateStr}</div>` : ''}
-    <div class="hourly-item hourly-item--wide">
-      <span class="hourly-item__time">${timeStr}</span>
-      <span class="hourly-item__icon">${wmoIcon(h.code)}</span>
-      <span class="hourly-item__temp">${h.temp != null ? Math.round(h.temp) + '°' : '—'}</span>
-      ${h.feel != null && Math.abs(h.feel - h.temp) >= 2
-        ? `<span class="hourly-item__feel">(${Math.round(h.feel)}°)</span>`
-        : '<span></span>'}
-      ${hasPrecip
-        ? `<span class="hourly-item__rain">${hasSnow ? '❄️' : ''}${h.precip > 0 ? h.precip.toFixed(1) : ''}<span class="hourly-item__unit">mm</span></span>`
-        : `<span class="hourly-item__rain hourly-item__rain--none">·</span>`}
-      ${h.precipProb != null ? `<span class="hourly-item__prob">${h.precipProb}%</span>` : '<span></span>'}
-      ${h.wind != null ? `<span class="hourly-item__wind">💨${h.wind.toFixed(0)}</span>` : '<span></span>'}
+    <div class="loc-hour-row">
+      <span class="loc-hour-row__time">${timeStr}</span>
+      <span class="loc-hour-row__icon">${wmoIcon(h.code)}</span>
+      <span class="loc-hour-row__temp">${tempStr}</span>
+      <span class="loc-hour-row__right">
+        ${precipStr ? `<span class="loc-hour-row__precip">${precipStr}</span>` : ''}
+        ${windStr   ? `<span class="loc-hour-row__wind">${windStr}</span>` : ''}
+      </span>
     </div>`;
   }).join('')}</div>`;
 }
