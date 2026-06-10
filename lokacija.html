@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="sl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#070f1a" />
+    <meta name="description" content="Napoved za mojo lokacijo – IKOPER43" />
+    <title>Moja lokacija – Vreme</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon-192.png" type="image/png" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body class="page-lokacija">
+    <div class="bg-gradient" aria-hidden="true"></div>
+
+    <header class="header">
+      <div class="header__brand">
+        <p class="header__station" id="loc-station">Moja lokacija</p>
+        <h1 class="header__title" id="loc-title">Napoved</h1>
+      </div>
+      <div class="header__actions">
+        <button type="button" id="btn-refresh-loc" class="btn btn--icon hidden" aria-label="Osveži">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M21 12a9 9 0 1 1-2.64-6.36" /><polyline points="21 3 21 9 15 9" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <p id="status" class="status" role="status"></p>
+
+    <main class="main main--forecast" id="main-content">
+
+      <!-- Prazno stanje -->
+      <div id="loc-empty" class="loc-empty">
+        <div class="loc-empty__icon">📍</div>
+        <h2 class="loc-empty__title">Napoved za tvojo lokacijo</h2>
+        <p class="loc-empty__desc">7-dnevna napoved + urna za točno lokacijo kjer si. Model ICON-D2 (2 km resolucija).</p>
+        <button id="btn-geolocate" class="btn btn--primary loc-empty__btn" type="button">
+          📍 Pridobi mojo lokacijo
+        </button>
+
+        <!-- Prednastavljena mesta -->
+        <div class="loc-presets">
+          <p class="loc-presets__title">Ali izberi kraj:</p>
+          <div class="loc-presets__grid">
+            <button class="loc-preset" data-lat="46.3612" data-lon="13.7979" data-name="Triglav (2864 m)">⛰️ Triglav</button>
+            <button class="loc-preset" data-lat="46.5108" data-lon="13.8454" data-name="Kranjska Gora">🎿 Kr. Gora</button>
+            <button class="loc-preset" data-lat="46.3639" data-lon="14.1094" data-name="Bled">🏔️ Bled</button>
+            <button class="loc-preset" data-lat="46.6091" data-lon="13.8369" data-name="Villach (AT)">🇦🇹 Villach</button>
+            <button class="loc-preset" data-lat="46.5396" data-lon="12.1357" data-name="Cortina d'Ampezzo">🏔️ Cortina</button>
+            <button class="loc-preset" data-lat="46.6176" data-lon="11.9954" data-name="Tre Cime di Lavaredo">⛰️ Tre Cime</button>
+            <button class="loc-preset" data-lat="46.4102" data-lon="11.8440" data-name="Marmolada (3343 m)">🧊 Marmolada</button>
+            <button class="loc-preset" data-lat="45.4837" data-lon="13.8806" data-name="Rakitovec (IKOPER43)">📡 Rakitovec</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Napoved vsebina (skrita dokler ni lokacije) -->
+      <div id="loc-forecast" class="hidden">
+
+        <!-- Trenutno -->
+        <section class="card loc-now-card" aria-label="Trenutno">
+          <div id="loc-current"></div>
+        </section>
+
+        <!-- 7-dnevna -->
+        <section class="card forecast-card" aria-label="7-dnevna napoved">
+          <div class="card__head">
+            <span class="card__icon card__icon--warm" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            </span>
+            <div>
+              <h2 class="card__title">7-dnevna napoved</h2>
+              <p class="card__desc">ICON-D2 · 2 km resolucija</p>
+            </div>
+          </div>
+          <div id="loc-daily" class="forecast-scroll"></div>
+        </section>
+
+        <!-- Urna napoved -->
+        <section class="card" aria-label="Urna napoved">
+          <div class="card__head">
+            <span class="card__icon card__icon--warm" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            </span>
+            <div>
+              <h2 class="card__title">Napoved po urah</h2>
+              <p class="card__desc">Temperatura · padavine · veter</p>
+            </div>
+          </div>
+          <div id="loc-hourly" class="forecast-hourly-wrap"></div>
+        </section>
+
+        <!-- Gumb za spremembo lokacije -->
+        <button id="btn-change-loc" class="btn btn--ghost loc-change-btn" type="button">
+          📍 Spremeni lokacijo
+        </button>
+      </div>
+
+    </main>
+
+    <nav class="bottom-nav" aria-label="Glavna navigacija">
+      <a href="./" class="bottom-nav__link">
+        <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M12 3v9m0 0 7.5-4.5M12 12 4.5 7.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+        </svg>
+        Zdaj
+      </a>
+      <a href="./forecast.html" class="bottom-nav__link">
+        <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M2 12h2M20 12h2M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          <circle cx="12" cy="12" r="4"/>
+        </svg>
+        Napoved
+      </a>
+      <a href="./lokacija.html" class="bottom-nav__link bottom-nav__link--active">
+        <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.5"/>
+        </svg>
+        Lokacija
+      </a>
+      <a href="./history.html" class="bottom-nav__link">
+        <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="18" rx="2" />
+          <path d="M16 2v4M8 2v4M3 10h18" />
+        </svg>
+        Zgodovina
+      </a>
+      <a href="./records.html" class="bottom-nav__link">
+        <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        Rekordi
+      </a>
+    </nav>
+
+    <script type="module" src="js/lokacija-page.js"></script>
+  </body>
+</html>
