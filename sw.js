@@ -1,9 +1,13 @@
-const CACHE = 'vreme-pwa-static-v14';
+const CACHE = 'vreme-pwa-static-v15';
 
 const ASSETS = [
   './',
   './index.html',
   './history.html',
+  './forecast.html',
+  './records.html',
+  './lokacija.html',
+  './sreca.html',
   './css/styles.css',
   './vendor/chart.umd.min.js',
   './js/config.js',
@@ -16,6 +20,10 @@ const ASSETS = [
   './js/pwa-update.js',
   './js/app.js',
   './js/history.js',
+  './js/forecast.js',
+  './js/forecast-page.js',
+  './js/lokacija-page.js',
+  './js/sreca-page.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
