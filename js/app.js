@@ -1,10 +1,12 @@
 import { REFRESH_MS, APP_VERSION, YEAR_SHEETS } from './config.js';
+import { initWindRose } from './wind-rose.js';
 import { sunriseSunset, moonPhase } from './astro.js';
 import { getDayFacts } from './fun-facts.js';
 import { setupInstallUI } from './install-ui.js';
 import { initPwaUpdates } from './pwa-update.js';
 import { loadWeatherBundle, fetchDayReadings } from './sheets.js';
 import { renderHourlyChart, renderDailyChart, renderPrecipChart24h } from './charts.js';
+
 import {
   windLabel,
   weatherKind,
@@ -175,6 +177,93 @@ function todayMinMax(readings) {
   if (!todayReadings.length) return { min: null, max: null };
   const temps = todayReadings.map((r) => r.temp);
   return { min: Math.min(...temps), max: Math.max(...temps) };
+}
+
+/** —— Meteoalarm opozorila —— */
+/** —— BBQ indeks iz postajnih podatkov —— */
+const BBQ_LEVELS = [
+  { min: 8.5, emoji: '🔥', label: 'Idealno za žar!',    color: '#22c55e' },
+  { min: 7,   emoji: '😎', label: 'Odlično',             color: '#86efac' },
+  { min: 5.5, emoji: '🙂', label: 'Solidno',             color: '#fde047' },
+  { min: 4,   emoji: '😐', label: 'Gre, ampak…',         color: '#fb923c' },
+  { min: 2,   emoji: '😬', label: 'Rajši v kuhinjo',     color: '#f87171' },
+  { min: 0,   emoji: '🌧️', label: 'Absolutno ne',        color: '#94a3b8' },
+];
+
+function calcBbqStation(latest) {
+  if (!latest) return null;
+  const temp    = latest.temp    ?? 20;
+  const windKmh = (latest.windSpeed ?? 0) * 3.6;  // m/s → km/h
+  const humid   = latest.humidity ?? 50;
+  const uv      = latest.uv      ?? 3;
+  const raining = (latest.precipTotal ?? 0) > 0;
+
+  // Temperatura (0–3): idealno 22–28°C
+  let tPts = 0;
+  if (temp >= 22 && temp <= 28) tPts = 3;
+  else if (temp >= 18 && temp <= 32) tPts = 2;
+  else if (temp >= 12 && temp <= 36) tPts = 1;
+
+  // Dež (0–3): trenutno dežuje ali ne
+  const rPts = raining ? 0 : 3;
+
+  // Veter (0–2)
+  let wPts = 0;
+  if (windKmh < 10) wPts = 2;
+  else if (windKmh < 20) wPts = 1.5;
+  else if (windKmh < 30) wPts = 1;
+  else if (windKmh < 45) wPts = 0.5;
+
+  // Vlaga (0–1): idealno 35–70%
+  const hPts = (humid >= 35 && humid <= 70) ? 1 : 0.5;
+
+  // UV (0–1)
+  const uvPts = uv >= 2 && uv <= 7 ? 1 : 0.5;
+
+  const raw = tPts + rPts + wPts + hPts + uvPts;
+  const maxRaw = 3 + 3 + 2 + 1 + 1; // = 10
+  return Math.round((raw / maxRaw) * 10 * 2) / 2;  // 0–10, korak 0.5
+}
+
+function renderBbqHome(latest) {
+  const el = document.getElementById('bbq-home-content');
+  const sub = document.getElementById('bbq-home-sub');
+  if (!el) return;
+
+  const score = calcBbqStation(latest);
+  if (score == null) {
+    el.innerHTML = '<p class="forecast-loading">Ni podatkov.</p>';
+    return;
+  }
+
+  const level = BBQ_LEVELS.find(l => score >= l.min) ?? BBQ_LEVELS.at(-1);
+  const pct   = (score / 10) * 100;
+  const windKmh = Math.round((latest.windSpeed ?? 0) * 3.6);
+  const raining = (latest.precipTotal ?? 0) > 0;
+
+  const warnings = [];
+  if (raining)                             warnings.push('🌧 Dežuje');
+  if (windKmh > 30)                        warnings.push(`💨 Veter ${windKmh} km/h`);
+  if ((latest.temp ?? 20) > 34)            warnings.push('🌡️ Zelo vroče');
+  if ((latest.temp ?? 20) < 12)            warnings.push('🥶 Prehladno');
+  if ((latest.uv ?? 0) > 8)               warnings.push('☀️ Visok UV');
+
+  if (sub) sub.textContent = `Rakitovec · ${new Date().toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })}`;
+
+  el.innerHTML = `
+    <div class="bbq-hero">
+      <span class="bbq-hero__emoji">${level.emoji}</span>
+      <div class="bbq-hero__info">
+        <span class="bbq-hero__score" style="color:${level.color}">${score.toFixed(1)}<span class="bbq-hero__of">/10</span></span>
+        <span class="bbq-hero__label">${level.label}</span>
+      </div>
+    </div>
+    <div class="bbq-bar-wrap">
+      <div class="bbq-bar">
+        <div class="bbq-bar__fill" style="width:${pct.toFixed(0)}%;background:${level.color}"></div>
+      </div>
+    </div>
+    ${warnings.length ? `<div class="bbq-warnings">${warnings.map(w => `<span class="bbq-warning">${w}</span>`).join('')}</div>` : ''}`;
 }
 
 /** —— Zanimivost dneva —— */
@@ -399,6 +488,7 @@ function renderAll(bundle, fromCache = false) {
 
   renderHero(latest, summary, readings);
   renderMetrics(latest, readings);
+  renderBbqHome(latest);
   renderSunStrip();
   renderDayFact(latest);
 
@@ -509,6 +599,7 @@ async function init() {
   await clearStaleCaches();
   initPwaUpdates();
   setupInstallUI();
+  initWindRose();
   $('#btn-refresh')?.addEventListener('click', refresh);
 
   const cached = loadCache();

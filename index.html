@@ -45,8 +45,6 @@
 
     <p id="status" class="status" role="status">Nalagam podatke…</p>
 
-    <div id="alerts-container" aria-live="polite"></div>
-
     <main class="main">
       <section class="card now-panel" aria-label="Trenutno vreme">
         <div class="now-panel__top">
@@ -84,6 +82,20 @@
       <!-- Ta dan v preteklosti -->
       <div id="day-history" class="day-history" hidden aria-label="Ta dan v preteklosti"></div>
 
+      <!-- BBQ indeks -->
+      <section class="card bbq-home-card" aria-label="BBQ indeks">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(251,146,60,0.15);color:#fb923c" aria-hidden="true">🔥</span>
+          <div>
+            <h2 class="card__title">BBQ indeks</h2>
+            <p class="card__desc" id="bbq-home-sub">Rakitovec · trenutno</p>
+          </div>
+        </div>
+        <div id="bbq-home-content" class="bbq-content">
+          <p class="forecast-loading">Nalagam…</p>
+        </div>
+      </section>
+
       <section class="card chart-card chart-card--hero">
         <div class="card__head">
           <span class="card__icon card__icon--warm" aria-hidden="true">
@@ -114,6 +126,20 @@
         </div>
       </section>
 
+      <!-- Veter roža -->
+      <section class="card" aria-label="Veter roža">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(56,189,248,0.15);color:#38bdf8" aria-hidden="true">🌬️</span>
+          <div>
+            <h2 class="card__title">Veter roža</h2>
+            <p class="card__desc">Smer in jakost · <span id="wind-rose-info">zadnji 3 meseci</span></p>
+          </div>
+        </div>
+        <div id="wind-rose-svg" style="display:flex;justify-content:center;overflow:hidden">
+          <p class="forecast-loading">Nalagam…</p>
+        </div>
+      </section>
+
       <section class="card chart-card">
         <div class="card__head">
           <span class="card__icon card__icon--rain" aria-hidden="true">
@@ -137,7 +163,7 @@
       <p class="footer__meta">Google Sheets · EasyWeather</p>
     </footer>
 
-    <nav class="bottom-nav" aria-label="Glavna navigacija">
+        <nav class="bottom-nav" aria-label="Glavna navigacija">
       <a href="./" class="bottom-nav__link bottom-nav__link--active">
         <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path d="M12 3v9m0 0 7.5-4.5M12 12 4.5 7.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
@@ -156,11 +182,17 @@
         </svg>
         Lokacija
       </a>
+      <a href="./postaje.html" class="bottom-nav__link">
+        <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        Postaje
+      </a>
       <a href="./sreca.html" class="bottom-nav__link">
         <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <rect x="2" y="2" width="20" height="20" rx="4"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.5" fill="currentColor" stroke="none"/>
+          <circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/>
         </svg>
-        Sreča
+        Kraji
       </a>
     </nav>
 

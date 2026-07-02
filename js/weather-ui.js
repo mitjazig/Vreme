@@ -99,7 +99,9 @@ export function aggregateByDay(readings, initialPrecipTotal = null) {
   return sorted.map((d) => {
     const rain =
       d.precipTotal != null && prevPrecip != null
-        ? Math.max(0, d.precipTotal - prevPrecip)
+        ? d.precipTotal >= prevPrecip
+          ? d.precipTotal - prevPrecip
+          : d.precipTotal  // counter reset detected: use new total as rain since reset
         : null;
     if (d.precipTotal != null) prevPrecip = d.precipTotal;
 

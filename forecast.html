@@ -44,9 +44,23 @@
       <a href="./records.html" class="sub-nav__link">⭐ Rekordi</a>
     </nav>
 
-    <div id="alerts-container" aria-live="polite"></div>
-
     <main class="main main--forecast">
+
+      <!-- Opozorila -->
+      <section class="card warn-card" id="warn-card" aria-label="Vremenski alarmi">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(251,191,36,0.15);color:#fbbf24" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </span>
+          <div>
+            <h2 class="card__title">Vremenski alarmi</h2>
+            <p class="card__desc">Koper · naslednjih 7 dni</p>
+          </div>
+        </div>
+        <div id="warn-list" class="warn-list">
+          <p class="forecast-loading">Nalagam…</p>
+        </div>
+      </section>
 
       <!-- 7-dnevna napoved -->
       <section class="card forecast-card" aria-label="7-dnevna napoved">
@@ -193,57 +207,6 @@
         </div>
       </section>
 
-      <!-- ARSO WebMet – verjetnostna napoved -->
-      <section class="card webmet-card" aria-label="Verjetnostna napoved ARSO">
-        <div class="card__head">
-          <span class="card__icon card__icon--warm" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          </span>
-          <div>
-            <h2 class="card__title">Verjetnostna napoved</h2>
-            <p class="card__desc">ARSO WebMet · JZ Slovenija · ECMWF ansambel</p>
-          </div>
-        </div>
-        <div class="webmet-wrap">
-          <p class="webmet-desc">Ansambel napoved (ECMWF EPS) za jugozahodno Slovenijo — temperatura, padavine, veter z verjetnostnimi razponi za naslednjih 10 dni.</p>
-          <a
-            href="https://meteo.arso.gov.si/met/sl/app/webmet/#webmet=vUHcs9WYkN3LtVGdl92LhBHcvcXZi1WZ09Cc1p2cvAncvd2LyVWYs12Lm9mclNWYzR3Lp5Wa05CetxGfzx2b2VmbpFGfm9mclNWYzRHf7R2btFWaupzJzx2b2VmbpF2JsAXYyFWblRXZypzJNFEUnwCd5BXZ6cSZwNnZvJXZjF2c0dSf"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="webmet-btn"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            Odpri verjetnostno napoved ARSO
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          </a>
-        </div>
-      </section>
-
-      <!-- Radarski zemljevid -->
-      <section class="card radar-card" aria-label="Radarski zemljevid padavin">
-        <div class="card__head">
-          <span class="card__icon card__icon--rain" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4M3.5 3.5a13 13 0 0 0 0 17M20.5 3.5a13 13 0 0 1 0 17"/></svg>
-          </span>
-          <div>
-            <h2 class="card__title">Radar padavin</h2>
-            <p class="card__desc">RainViewer · animacija</p>
-          </div>
-        </div>
-        <div class="radar-map-wrap">
-          <div id="radar-map" class="radar-map"></div>
-          <div class="radar-controls">
-            <button id="radar-play" class="radar-btn radar-btn--play" aria-label="Predvajaj/Premor">
-              <svg id="radar-play-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-            </button>
-            <div class="radar-timeline">
-              <div id="radar-progress" class="radar-timeline__bar"></div>
-            </div>
-            <span id="radar-time" class="radar-time">—</span>
-          </div>
-          <p id="radar-updated" class="radar-updated"></p>
-        </div>
-      </section>
 
       <!-- ARSO radar GIF -->
       <section class="card radar-card" aria-label="ARSO radarska slika">
@@ -267,9 +230,70 @@
         </div>
       </section>
 
+      <!-- Windy radar iframe -->
+      <section class="card radar-card" aria-label="Windy radar">
+        <div class="card__head">
+          <span class="card__icon card__icon--rain" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4M3.5 3.5a13 13 0 0 0 0 17M20.5 3.5a13 13 0 0 1 0 17"/></svg>
+          </span>
+          <div>
+            <h2 class="card__title">Radar padavin</h2>
+            <p class="card__desc">Windy · animiran · Jadran &amp; okolica</p>
+          </div>
+        </div>
+        <div class="windy-wrap">
+          <iframe
+            id="windy-iframe"
+            src="https://embed.windy.com/embed2.html?lat=45.55&lon=13.73&detailLat=45.55&detailLon=13.73&width=650&height=450&zoom=7&level=surface&overlay=radar&product=radar&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1"
+            frameborder="0"
+            allowfullscreen
+            loading="lazy"
+            title="Windy radar padavin"
+          ></iframe>
+        </div>
+      </section>
+
+      <!-- Valovi (Windy gfsWave) -->
+      <section class="card waves-card" aria-label="Napoved valov">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(56,189,248,0.12);color:#38bdf8" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/><path d="M2 12c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/><path d="M2 18c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/></svg>
+          </span>
+          <div>
+            <h2 class="card__title">Valovi · Jadran</h2>
+            <p class="card__desc">Windy GFS Wave · višina · smer · perioda</p>
+          </div>
+        </div>
+        <div id="waves-content" class="waves-scroll">
+          <p class="forecast-loading">Nalagam…</p>
+        </div>
+      </section>
+
+      <!-- Satelitska slika (EUMETSAT Meteosat) -->
+      <section class="card satellite-card" aria-label="Satelitska slika">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(99,102,241,0.15);color:#818cf8" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          </span>
+          <div>
+            <h2 class="card__title">Satelitska slika</h2>
+            <p class="card__desc">EUMETSAT Meteosat · Slovenija &amp; okolica</p>
+          </div>
+        </div>
+        <div class="satellite-controls">
+          <button class="sat-btn sat-btn--active" data-layer="msg_fes:rgb_naturalenhncd">Vidno</button>
+          <button class="sat-btn" data-layer="msg_fes:ir108">Infrardeče</button>
+          <button class="sat-btn" data-layer="msg_fes:rgb_airmass">Airmass</button>
+        </div>
+        <div class="satellite-wrap">
+          <img id="satellite-img" class="satellite-img" alt="Satelitska slika" />
+          <p id="satellite-updated" class="radar-updated"></p>
+        </div>
+      </section>
+
     </main>
 
-    <nav class="bottom-nav" aria-label="Glavna navigacija">
+        <nav class="bottom-nav" aria-label="Glavna navigacija">
       <a href="./" class="bottom-nav__link">
         <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path d="M12 3v9m0 0 7.5-4.5M12 12 4.5 7.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
@@ -288,11 +312,17 @@
         </svg>
         Lokacija
       </a>
+      <a href="./postaje.html" class="bottom-nav__link">
+        <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        Postaje
+      </a>
       <a href="./sreca.html" class="bottom-nav__link">
         <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <rect x="2" y="2" width="20" height="20" rx="4"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.5" fill="currentColor" stroke="none"/>
+          <circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/>
         </svg>
-        Sreča
+        Kraji
       </a>
     </nav>
 

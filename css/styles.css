@@ -1,21 +1,23 @@
 :root {
-  --bg: #070f1a;
-  --bg-elevated: #0f1c2e;
-  --card: rgba(18, 32, 52, 0.82);
-  --card-hover: rgba(24, 42, 68, 0.9);
-  --card-border: rgba(148, 163, 184, 0.1);
-  --text: #f1f5f9;
-  --muted: #8b9cb3;
+  --bg: #060e1b;
+  --bg-elevated: #0d1e33;
+  --card: rgba(12, 26, 46, 0.68);
+  --card-hover: rgba(18, 36, 60, 0.88);
+  --card-border: rgba(255, 255, 255, 0.07);
+  --card-highlight: rgba(255, 255, 255, 0.045);
+  --text: #eef2f7;
+  --text-secondary: #94a3b8;
+  --muted: #6b7f96;
   --accent: #38bdf8;
-  --accent-dim: rgba(56, 189, 248, 0.14);
+  --accent-dim: rgba(56, 189, 248, 0.12);
   --warm: #f59e0b;
-  --warm-glow: rgba(245, 158, 11, 0.25);
+  --warm-glow: rgba(245, 158, 11, 0.22);
   --cold: #38bdf8;
   --hot: #f43f5e;
   --rain: #34d399;
-  --radius: 18px;
+  --radius: 20px;
   --radius-sm: 12px;
-  --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --shadow: 0 6px 28px rgba(0, 0, 0, 0.45), 0 1px 0 var(--card-highlight) inset;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -45,9 +47,10 @@ body {
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(56, 189, 248, 0.18), transparent 55%),
-    radial-gradient(ellipse 50% 40% at 100% 0%, rgba(245, 158, 11, 0.1), transparent),
-    radial-gradient(ellipse 40% 35% at 0% 100%, rgba(52, 211, 153, 0.06), transparent),
+    radial-gradient(ellipse 100% 50% at 50% -5%, rgba(56, 189, 248, 0.26), transparent 58%),
+    radial-gradient(ellipse 55% 45% at 95% 5%, rgba(99, 102, 241, 0.1), transparent),
+    radial-gradient(ellipse 45% 35% at 5% 85%, rgba(52, 211, 153, 0.07), transparent),
+    radial-gradient(ellipse 60% 30% at 50% 110%, rgba(56, 189, 248, 0.06), transparent),
     var(--bg);
 }
 
@@ -148,8 +151,18 @@ body {
   border: 1px solid var(--card-border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(160deg, rgba(255,255,255,0.055) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 .card__head {
@@ -160,14 +173,15 @@ body {
 }
 
 .card__icon {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--accent-dim);
   color: var(--accent);
   flex-shrink: 0;
+  border: 1px solid rgba(56,189,248,0.15);
 }
 
 .card__icon svg {
@@ -186,14 +200,16 @@ body {
 
 .card__title {
   margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .card__desc {
-  margin: 0.15rem 0 0;
-  font-size: 0.75rem;
+  margin: 0.1rem 0 0;
+  font-size: 0.72rem;
   color: var(--muted);
+  letter-spacing: 0.01em;
 }
 
 /* —— Trenutno stanje (kompaktno) —— */
@@ -297,7 +313,7 @@ body {
 }
 
 .now-ext {
-  font-size: 0.72rem;
+  font-size: 1rem;
   font-weight: 700;
   padding: 0.2rem 0.45rem;
   border-radius: 6px;
@@ -448,10 +464,22 @@ body {
 .alert-banner__body { display: flex; flex-direction: column; gap: 0.1rem; }
 .alert-banner__body strong { font-weight: 700; }
 
-.alert--yellow  { background: rgba(234,179,8,0.12);  color: #fcd34d; }
-.alert--orange  { background: rgba(249,115,22,0.12); color: #fb923c; }
-.alert--red     { background: rgba(244,63,94,0.15);  color: #f43f5e; }
-.alert--violet  { background: rgba(167,139,250,0.15);color: #a78bfa; }
+.alert--yellow  { background: rgba(234,179,8,0.12);   color: #fcd34d; }
+.alert--orange  { background: rgba(249,115,22,0.12);  color: #fb923c; }
+.alert--red     { background: rgba(244,63,94,0.15);   color: #f43f5e; }
+.alert--violet  { background: rgba(167,139,250,0.15); color: #a78bfa; }
+
+.alert-fallback-link {
+  display: inline-block;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, border-color 0.15s;
+}
+.alert-fallback-link:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
 
 /* —— 7-dnevna napoved —— */
 .forecast-card { padding-bottom: 1rem; }
@@ -661,6 +689,19 @@ body {
 }
 
 /* ARSO radar GIF */
+.windy-wrap {
+  padding: 0 0 0.75rem;
+  border-radius: 0 0 1rem 1rem;
+  overflow: hidden;
+}
+
+.windy-wrap iframe {
+  width: 100%;
+  height: 380px;
+  border: none;
+  display: block;
+}
+
 .radar-wrap {
   padding: 0.5rem 0.75rem 0.75rem;
   display: flex;
@@ -676,6 +717,209 @@ body {
   border-radius: 10px;
   overflow: hidden;
   background: #0f1c2e;
+}
+
+/* —— Vremenski alarmi —— */
+.warn-list { padding: 0.5rem 0.75rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+
+.warn-none {
+  padding: 0.6rem 0.25rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.warn-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+.warn-row__bar {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+}
+
+.warn-row__icon { font-size: 1.2rem; flex-shrink: 0; }
+
+.warn-row__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.warn-row__title { font-size: 0.85rem; font-weight: 600; }
+.warn-row__desc  { font-size: 0.75rem; color: var(--muted); }
+
+.warn-row__badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.warn-row__badge--yellow { background: rgba(251,191,36,0.18); color: #fbbf24; }
+.warn-row__badge--orange { background: rgba(249,115,22,0.18); color: #f97316; }
+.warn-row__badge--red    { background: rgba(244,63,94,0.18);  color: #f43f5e; }
+
+/* —— Aktivnosti —— */
+.act-list { padding: 0.5rem 0.75rem 0.75rem; display: flex; flex-direction: column; gap: 0.55rem; }
+
+.act-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.act-row__icon { font-size: 1.3rem; width: 1.8rem; text-align: center; flex-shrink: 0; }
+
+.act-row__body { flex: 1; }
+
+.act-row__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.25rem;
+}
+
+.act-row__name  { font-size: 0.82rem; font-weight: 600; }
+.act-row__score { font-size: 0.75rem; font-weight: 700; }
+
+.act-bar {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+
+.act-bar__fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+/* —— Kraji grid —— */
+.main--kraji { padding-top: 0.5rem; }
+
+.kraji-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem 0.75rem;
+}
+
+.kraj-tile {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 0.65rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.kraj-tile__top {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.15rem;
+}
+
+.kraj-tile__emoji { font-size: 1rem; line-height: 1; }
+.kraj-tile__name  { flex: 1; font-size: 0.75rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kraj-tile__icon  { font-size: 1.1rem; }
+
+.kraj-tile__temp {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.kraj-tile__range {
+  font-size: 0.68rem;
+  color: var(--muted);
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kraj-rain { color: #38bdf8; }
+
+/* —— Valovi (Windy) —— */
+.waves-scroll { padding: 0.25rem 0.75rem 0.75rem; }
+
+.waves-list { display: flex; flex-direction: column; }
+
+.waves-day-sep {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0.6rem 0 0.2rem;
+}
+
+.waves-row {
+  display: grid;
+  grid-template-columns: 3rem 3.5rem 3rem 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.82rem;
+}
+.waves-row:last-child { border-bottom: none; }
+
+.waves-row__time { color: var(--muted); font-size: 0.75rem; }
+.waves-row__h    { font-weight: 700; font-size: 0.9rem; }
+.waves-row__dir  { color: var(--text-secondary); font-size: 0.78rem; }
+.waves-row__per  { color: var(--muted); font-size: 0.75rem; text-align: right; }
+
+/* —— Satelitska slika —— */
+.satellite-controls {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0 0.75rem 0.5rem;
+}
+.sat-btn {
+  padding: 0.25rem 0.7rem;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sat-btn--active,
+.sat-btn:hover {
+  background: rgba(129,140,248,0.18);
+  border-color: #818cf8;
+  color: #c7d2fe;
+}
+.satellite-wrap {
+  padding: 0 0.75rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.satellite-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 10px;
+  background: #0f1c2e;
+  min-height: 120px;
 }
 
 /* —— Urna napoved —— */
@@ -852,11 +1096,12 @@ body.is-loading .now-panel__temp span:first-child {
   display: flex;
   max-width: 540px;
   margin: 0 auto;
-  padding: 0.4rem 0.35rem calc(0.4rem + var(--safe-bottom));
-  gap: 0.2rem;
-  background: rgba(7, 15, 26, 0.92);
-  border-top: 1px solid var(--card-border);
-  backdrop-filter: blur(20px);
+  padding: 0.35rem 0.5rem calc(0.35rem + var(--safe-bottom));
+  gap: 0.15rem;
+  background: rgba(6, 14, 25, 0.92);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -867,24 +1112,42 @@ body.is-loading .now-panel__temp span:first-child {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.2rem;
-  padding: 0.45rem;
-  border-radius: var(--radius-sm);
+  gap: 0.18rem;
+  padding: 0.4rem 0.3rem;
+  border-radius: 14px;
   text-decoration: none;
   color: var(--muted);
-  font-size: 0.7rem;
   font-weight: 600;
-  transition: color 0.15s, background 0.15s;
+  transition: color 0.2s, background 0.2s;
+  position: relative;
 }
 
 .bottom-nav__svg {
   width: 22px;
   height: 22px;
+  transition: transform 0.2s;
 }
 
 .bottom-nav__link--active {
   color: var(--accent);
-  background: var(--accent-dim);
+  background: rgba(56,189,248,0.09);
+}
+
+.bottom-nav__link--active .bottom-nav__svg {
+  transform: translateY(-1px);
+}
+
+.bottom-nav__link--active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(56,189,248,0.6);
 }
 
 /* —— History / stats —— */
@@ -2053,17 +2316,17 @@ body.is-loading .stat-pill {
    Navigation — 4 tabs
    —————————————————————————————————————— */
 
-/* 4 tabice – vsaka 25% */
+/* 5 tabic – vsaka 20% */
 .bottom-nav__link {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   min-width: 0;
   flex-shrink: 0;
-  flex-basis: 25%;
+  flex-basis: 20%;
 }
 
 .bottom-nav__svg {
-  width: 20px;
-  height: 20px;
+  width: 21px;
+  height: 21px;
 }
 
 /* ——————————————————————————————————————
@@ -2488,8 +2751,12 @@ body.is-loading .stat-pill {
 
 .sub-nav {
   display: flex;
-  gap: 0.3rem;
-  padding: 0.4rem 1rem 0;
+  gap: 0.25rem;
+  margin: 0.5rem 0.85rem 0;
+  padding: 0.25rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -2501,20 +2768,21 @@ body.is-loading .stat-pill {
   align-items: center;
   justify-content: center;
   gap: 0.3rem;
-  padding: 0.45rem 0.6rem;
+  padding: 0.42rem 0.6rem;
   border-radius: 10px;
-  font-size: 0.78rem;
+  font-size: 0.77rem;
   font-weight: 500;
   color: var(--muted);
   text-decoration: none;
   white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.18s, color 0.18s, box-shadow 0.18s;
 }
-.sub-nav__link:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+.sub-nav__link:hover { background: rgba(255,255,255,0.05); color: var(--text); }
 .sub-nav__link--active {
-  background: rgba(56,189,248,0.12);
-  color: var(--accent);
+  background: rgba(14, 30, 50, 0.9);
+  color: var(--text);
   font-weight: 600;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.06) inset;
 }
 
 /* ——————————————————————————————————————
@@ -2531,6 +2799,182 @@ body.is-loading .stat-pill {
   border-radius: 10px;
   flex-shrink: 0;
 }
+
+/* ── Postaje v bližini ─────────────────────────────── */
+.stations-list {
+  display: flex;
+  flex-direction: column;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.station-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.station-row:last-child { border-bottom: none; }
+
+.station-row__icon {
+  font-size: 1.4rem;
+  width: 1.8rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.station-row__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.station-row__name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.station-row__meta {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.station-row__right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  flex-shrink: 0;
+}
+
+.station-row__temp {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.station-temp--hot  { color: var(--hot); }
+.station-temp--cold { color: var(--cold); }
+
+.station-row__dist {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.stations-empty {
+  padding: 0.75rem 1rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ── Postaje SLO stran ─────────────────────────────── */
+.stations-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-bottom: 1rem;
+}
+
+.stations-sort-bar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  flex-wrap: wrap;
+}
+
+.sort-btn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.sort-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+.sort-btn--active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.stations-page-list {
+  background: var(--card-bg);
+  border-radius: 16px;
+  margin: 0 1rem;
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+}
+
+.st-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.st-row:last-child { border-bottom: none; }
+
+.st-row__icon {
+  font-size: 1.3rem;
+  width: 1.7rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.st-row__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.st-row__name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.st-row__meta {
+  font-size: 0.7rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.st-row__temp {
+  font-size: 1.1rem;
+  font-weight: 700;
+  min-width: 3rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.st-badge {
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
+.st-badge--hot  { background: rgba(239,68,68,0.2);  color: #ef4444; }
+.st-badge--cold { background: rgba(147,197,253,0.2); color: #93c5fd; }
+.st-badge--ams  { background: rgba(52,211,153,0.15); color: #34d399; }
 
 .bbq-content {
   padding: 0.75rem 1rem 1rem;

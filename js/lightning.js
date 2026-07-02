@@ -94,25 +94,44 @@ export class LightningTracker {
     try {
       const d = JSON.parse(raw);
 
-      // Nekateri strežniki pošljejo array, drugi objekt
-      const items = Array.isArray(d) ? d : [d];
+      // Podpri različne formate: direktni objekt, array, ali { strokes: [...] }
+      let items;
+      if (Array.isArray(d)) {
+        items = d;
+      } else if (d.strokes && Array.isArray(d.strokes)) {
+        items = d.strokes;
+      } else {
+        items = [d];
+      }
 
+      let added = 0;
       for (const item of items) {
-        if (item.lat == null || item.lon == null) continue;
+        // Podpri lat/lon ali x/y (nekateri strežniki)
+        const lat = item.lat ?? item.y;
+        const lon = item.lon ?? item.x;
+        if (lat == null || lon == null) continue;
 
-        // Blitzortung pošilja čas v nanosekundah
-        const timeMs = item.time
-          ? Math.floor(item.time / 1_000_000)
-          : Date.now();
+        // Blitzortung pošilja čas v nanosekundah (18 mest) ali milisekundah (13 mest)
+        let timeMs;
+        if (item.time) {
+          timeMs = item.time > 1e15
+            ? Math.floor(item.time / 1_000_000)  // nanosekunde → ms
+            : item.time;                           // že milisekunde
+        } else {
+          timeMs = Date.now();
+        }
 
         // Zavrži preveč stare ali iz prihodnosti
         const now = Date.now();
         if (timeMs > now + 60_000 || now - timeMs > MAX_AGE_MS) continue;
 
-        const strike = { lat: item.lat, lon: item.lon, time: timeMs };
+        const strike = { lat, lon, time: timeMs };
         this._addMarker(strike);
         this.strikes.push(strike);
+        added++;
       }
+
+      if (added > 0) console.debug(`Lightning: +${added} strel, skupaj ${this.strikes.length}`);
 
       // Ohrani le MAX_STRIKES
       if (this.strikes.length > MAX_STRIKES) {
@@ -123,7 +142,9 @@ export class LightningTracker {
       }
 
       this.onUpdate();
-    } catch { /* ignoriraj malformed */ }
+    } catch (err) {
+      console.debug('Lightning parse error:', err.message, raw?.slice(0, 100));
+    }
   }
 
   _addMarker(strike) {
