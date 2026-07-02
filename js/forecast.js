@@ -69,6 +69,28 @@ export async function fetchHourlyForecast() {
     .filter((h) => h.time >= now);
 }
 
+/** Napoved vetra – 7 dni urno */
+export async function fetchWindForecast() {
+  const params = new URLSearchParams({
+    latitude: LAT, longitude: LON,
+    hourly: ['wind_speed_10m', 'wind_gusts_10m', 'wind_direction_10m'].join(','),
+    timezone: 'Europe/Ljubljana',
+    forecast_days: '7',
+  });
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+  if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
+  const { hourly } = await res.json();
+  const now = new Date();
+  return hourly.time
+    .map((t, i) => ({
+      time:  new Date(t),
+      wind:  hourly.wind_speed_10m?.[i]      ?? null,
+      gust:  hourly.wind_gusts_10m?.[i]      ?? null,
+      dir:   hourly.wind_direction_10m?.[i]  ?? null,
+    }))
+    .filter((h) => h.time >= now);
+}
+
 /** Trenutna temperatura morja + 7-dnevna napoved */
 export async function fetchSeaTemp() {
   const params = new URLSearchParams({
