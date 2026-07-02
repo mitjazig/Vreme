@@ -1,7 +1,8 @@
 import { initPwaUpdates } from './pwa-update.js';
-import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides, fetchFireDanger, fetchLocationForecast, reverseGeocode, fetchWarnings, fetchWindyWaves } from './forecast.js';
+import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides, fetchFireDanger, fetchLocationForecast, reverseGeocode, fetchWarnings, fetchWindyWaves, fetchWindForecast } from './forecast.js';
 import { moonPhase, STATION_LAT, STATION_LON } from './astro.js';
 import { LightningTracker } from './lightning.js';
+import { initNotifications, notifyWarnings } from './notifications.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -385,6 +386,104 @@ async function initLocationForecast() {
 }
 
 /** —— Valovi (Windy) —— */
+let windChart = null;
+
+function renderWindChart(points) {
+  const canvas = document.getElementById('chart-wind');
+  if (!canvas) return;
+  if (!points?.length) return;
+
+  // Vzorči vsake 3 ure za lepši prikaz (168 → 56 točk)
+  const sampled = points.filter((_, i) => i % 3 === 0);
+
+  const labels = sampled.map((p) =>
+    p.time.toLocaleDateString('sl-SI', { weekday: 'short', day: 'numeric' }) + ' ' +
+    p.time.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })
+  );
+
+  const DIR_LABELS = ['S','SSV','SV','VSV','V','VJV','JV','JJV','J','JJZ','JZ','ZJZ','Z','ZSZ','SZ','SSZ'];
+
+  if (windChart) { windChart.destroy(); windChart = null; }
+
+  windChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Sunki (km/h)',
+          data: sampled.map((p) => p.gust != null ? +p.gust.toFixed(1) : null),
+          borderColor: 'rgba(251,146,60,0.9)',
+          backgroundColor: 'rgba(251,146,60,0.12)',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.3,
+        },
+        {
+          label: 'Hitrost (km/h)',
+          data: sampled.map((p) => p.wind != null ? +p.wind.toFixed(1) : null),
+          borderColor: 'rgba(56,189,248,0.9)',
+          backgroundColor: 'rgba(56,189,248,0.1)',
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.3,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          labels: { color: 'rgba(255,255,255,0.55)', font: { size: 11 }, boxWidth: 12, padding: 12 },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => {
+              const p = sampled[items[0].dataIndex];
+              const dir = p.dir != null ? ' · ' + (DIR_LABELS[Math.round(p.dir / 22.5) % 16] ?? '') : '';
+              return items[0].label + dir;
+            },
+          },
+          backgroundColor: 'rgba(7,15,26,0.92)',
+          titleColor: 'rgba(255,255,255,0.7)',
+          bodyColor: 'rgba(255,255,255,0.85)',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: 'rgba(255,255,255,0.35)',
+            font: { size: 9 },
+            maxRotation: 0,
+            autoSkip: false,
+            callback(val, i) {
+              const p = sampled[i];
+              if (!p) return '';
+              if (i === 0) return p.time.toLocaleDateString('sl-SI', { weekday: 'short', day: 'numeric' });
+              const prev = sampled[i - 1];
+              const newDay = prev && p.time.getDate() !== prev.time.getDate();
+              if (newDay) return p.time.toLocaleDateString('sl-SI', { weekday: 'short', day: 'numeric' });
+              return '';
+            },
+          },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+        },
+        y: {
+          ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 10 } },
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          title: { display: true, text: 'km/h', color: 'rgba(255,255,255,0.3)', font: { size: 10 } },
+        },
+      },
+    },
+  });
+}
+
 function renderWaves(points) {
   const el = document.getElementById('waves-content');
   if (!el) return;
@@ -620,7 +719,7 @@ function renderWarnings(warnings) {
 async function load() {
   setStatus('Nalagam napoved…');
   try {
-    const [forecast, hourly, sea, aq, fire, warnings, waves] = await Promise.allSettled([
+    const [forecast, hourly, sea, aq, fire, warnings, waves, windFc] = await Promise.allSettled([
       fetchForecast(),
       fetchHourlyForecast(),
       fetchSeaTemp(),
@@ -628,6 +727,7 @@ async function load() {
       fetchFireDanger(),
       fetchWarnings(),
       fetchWindyWaves(),
+      fetchWindForecast(),
     ]);
 
     if (forecast.status === 'fulfilled') renderForecast(forecast.value);
@@ -645,11 +745,16 @@ async function load() {
     if (fire.status === 'fulfilled') renderFireDanger(fire.value);
     else renderFireDanger(null);
 
-    if (warnings.status === 'fulfilled') renderWarnings(warnings.value);
-    else renderWarnings([]);
+    if (warnings.status === 'fulfilled') {
+      renderWarnings(warnings.value);
+      notifyWarnings(warnings.value);
+    } else renderWarnings([]);
 
     if (waves.status === 'fulfilled') renderWaves(waves.value);
     else renderWaves(null);
+
+    if (windFc.status === 'fulfilled') renderWindChart(windFc.value);
+    else renderWindChart([]);
 
     // Plima se računa lokalno, ne zahteva API klica
     renderTides();
@@ -705,6 +810,7 @@ function initSatellite() {
 
 async function init() {
   initPwaUpdates();
+  initNotifications();
   $('#btn-reload')?.addEventListener('click', load);
 
   await load();

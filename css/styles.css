@@ -720,6 +720,23 @@ body {
 }
 
 /* —— Vremenski alarmi —— */
+.notif-ask-btn {
+  display: block;
+  width: calc(100% - 2rem);
+  margin: 0.5rem 1rem;
+  padding: 0.6rem 1rem;
+  background: rgba(251,191,36,0.12);
+  border: 1px solid rgba(251,191,36,0.3);
+  border-radius: 10px;
+  color: #fbbf24;
+  font-size: 0.82rem;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s;
+}
+.notif-ask-btn:hover { background: rgba(251,191,36,0.2); }
+
 .warn-list { padding: 0.5rem 0.75rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
 
 .warn-none {
@@ -1022,6 +1039,10 @@ body {
 
 .chart-wrap--short {
   height: 160px;
+}
+
+.chart-wrap--wind {
+  height: 200px;
 }
 
 .chart-wrap--tall {
