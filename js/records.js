@@ -212,75 +212,321 @@ function renderMonthlyClimate(allDaily) {
   </div>`;
 }
 
+/** ——— Primerjava let ——— */
+function renderYearCompare(dailyByYear, years) {
+  const el = $('#year-compare');
+  if (!el) return;
+
+  const sorted = [...years].sort((a, b) => a - b);
+
+  const stats = sorted.map((year) => {
+    const daily = dailyByYear[year] ?? [];
+    let hotDay = null, coldDay = null, rainDay = null, windDay = null;
+    let totalRain = 0, hotDays = 0, coldDays = 0, rainDays = 0;
+    const temps = [];
+    for (const d of daily) {
+      if (d.max != null && (hotDay == null || d.max > hotDay.max)) hotDay = d;
+      if (d.min != null && (coldDay == null || d.min < coldDay.min)) coldDay = d;
+      if (d.rain != null && (rainDay == null || d.rain > rainDay.rain)) rainDay = d;
+      if (d.windMax != null && (windDay == null || d.windMax > windDay.windMax)) windDay = d;
+      if (d.rain != null) totalRain += d.rain;
+      if (d.max != null && d.max >= 30) hotDays++;
+      if (d.min != null && d.min <= 0) coldDays++;
+      if (d.rain != null && d.rain > 0.1) rainDays++;
+      if (d.avg != null) temps.push(d.avg);
+    }
+    const avgTemp = temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : null;
+    return { year, days: daily.length, maxTemp: hotDay?.max ?? null, minTemp: coldDay?.min ?? null,
+      maxRain: rainDay?.rain ?? null, maxWind: windDay?.windMax ?? null,
+      totalRain, hotDays, coldDays, rainDays, avgTemp };
+  });
+
+  // Find extremes for bar scaling
+  const maxOf = (key) => Math.max(...stats.map(s => s[key] ?? 0));
+  const minOf = (key) => Math.min(...stats.filter(s => s[key] != null).map(s => s[key]));
+  const extremes = {
+    maxTemp: maxOf('maxTemp'), minTemp: minOf('minTemp'),
+    maxRain: maxOf('maxRain'), maxWind: maxOf('maxWind'),
+    totalRain: maxOf('totalRain'), hotDays: maxOf('hotDays'),
+    coldDays: maxOf('coldDays'), avgTemp: maxOf('avgTemp'),
+  };
+
+  function bar(val, max, color) {
+    if (val == null || max === 0) return '<div class="yc-bar"></div>';
+    const pct = Math.max(4, Math.round(Math.abs(val) / Math.abs(max) * 100));
+    return `<div class="yc-bar"><div class="yc-bar__fill" style="width:${pct}%;background:${color}"></div></div>`;
+  }
+
+  const rows = [
+    { label: 'Maks. temp.', key: 'maxTemp', fmt: v => v?.toFixed(1) + '°C', color: '#f87171', unit: '' },
+    { label: 'Min. temp.',  key: 'minTemp', fmt: v => v?.toFixed(1) + '°C', color: '#38bdf8', unit: '' },
+    { label: 'Povp. temp.', key: 'avgTemp', fmt: v => v?.toFixed(1) + '°C', color: '#a78bfa', unit: '' },
+    { label: 'Maks. dež/dan', key: 'maxRain', fmt: v => v?.toFixed(0) + ' mm', color: '#34d399', unit: '' },
+    { label: 'Skupaj dež',  key: 'totalRain', fmt: v => v?.toFixed(0) + ' mm', color: '#22d3ee', unit: '' },
+    { label: 'Maks. sunek', key: 'maxWind', fmt: v => v?.toFixed(1) + ' m/s', color: '#fbbf24', unit: '' },
+    { label: 'Vroči dnevi ≥30°', key: 'hotDays', fmt: v => v + ' dni', color: '#fb923c', unit: '' },
+    { label: 'Mrzle noči ≤0°', key: 'coldDays', fmt: v => v + ' dni', color: '#818cf8', unit: '' },
+  ];
+
+  el.innerHTML = `
+    <div class="yc-table-wrap">
+      <table class="yc-table">
+        <thead>
+          <tr>
+            <th class="yc-th yc-th--label"></th>
+            ${sorted.map(y => `<th class="yc-th">${y}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(row => `
+            <tr class="yc-row">
+              <td class="yc-td yc-td--label">${row.label}</td>
+              ${stats.map(s => {
+                const val = s[row.key];
+                const isMax = val != null && val === (row.key === 'minTemp'
+                  ? Math.min(...stats.filter(x => x[row.key] != null).map(x => x[row.key]))
+                  : Math.max(...stats.filter(x => x[row.key] != null).map(x => x[row.key])));
+                return `<td class="yc-td${isMax ? ' yc-td--best' : ''}">
+                  <span class="yc-val">${val != null ? row.fmt(val) : '—'}</span>
+                  ${bar(val, extremes[row.key], row.color)}
+                </td>`;
+              }).join('')}
+            </tr>`).join('')}
+          <tr class="yc-row yc-row--muted">
+            <td class="yc-td yc-td--label">Dni meritev</td>
+            ${stats.map(s => `<td class="yc-td"><span class="yc-val">${s.days}</span></td>`).join('')}
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+
 /** ——— Temperaturni heatmap ——— */
 function renderHeatmap(daily, year) {
   const wrap = $('#heatmap-wrap');
   if (!wrap) return;
 
-  // Indeksiraj po datumskem ključu
+  // Index by date key
   const dayMap = new Map();
   for (const d of daily) {
     const key = `${d.date.getFullYear()}-${String(d.date.getMonth()+1).padStart(2,'0')}-${String(d.date.getDate()).padStart(2,'0')}`;
     dayMap.set(key, d.avg ?? d.max ?? d.min);
   }
 
-  const jan1 = new Date(year, 0, 1);
-  const isLeap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-  const totalDays = isLeap ? 366 : 365;
-
-  // Dan v tednu za 1. jan (0=ned … 6=sob) → odmik za pon-aligniranje
-  const startDow = (jan1.getDay() + 6) % 7; // 0=pon
-
-  // Mesečni naslovi — pozicija v stolpcih
-  const monthStarts = [];
-  for (let m = 0; m < 12; m++) {
-    const d = new Date(year, m, 1);
-    const dayOfYear = Math.floor((d - jan1) / 86400000);
-    const col = Math.floor((dayOfYear + startDow) / 7);
-    monthStarts.push({ col, label: MONTHS_SL[m] });
-  }
-
-  const totalCols = Math.ceil((totalDays + startDow) / 7);
-
-  // Gradi celice
-  const cells = [];
-  // Prazne celice na začetku
-  for (let i = 0; i < startDow; i++) {
-    cells.push('<div class="heatmap-cell heatmap-cell--empty"></div>');
-  }
-
-  for (let i = 0; i < totalDays; i++) {
-    const d = new Date(year, 0, 1 + i);
-    const key = `${year}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const temp = dayMap.get(key);
-    const cls  = tempClass(temp);
-    const title = temp != null
-      ? `${d.toLocaleDateString('sl-SI', {day:'numeric',month:'short'})}: ${temp.toFixed(1)}°C`
-      : d.toLocaleDateString('sl-SI', {day:'numeric',month:'short'});
-    cells.push(`<div class="heatmap-cell${cls ? ' heatmap-cell--data' : ''}" ${cls ? `data-t="${cls}"` : ''} title="${title}"></div>`);
-  }
-
-  // Mesečne oznake (nad gridom)
-  const CELL_W = 13; // 11px cell + 2px gap
-  const monthLabelsHtml = monthStarts.map((ms) =>
-    `<span style="margin-left:${ms.col === 0 ? 0 : `${ms.col * CELL_W - (monthStarts[0]?.col ?? 0) * CELL_W}px`}">${ms.label}</span>`
+  // Day-number header (1–31)
+  const dayNums = Array.from({ length: 31 }, (_, i) =>
+    `<div class="hm2-day-num">${i + 1}</div>`
   ).join('');
 
-  // Dan v tednu oznake
-  const dowLabels = ['P','T','S','Č','P','S','N'].map((l, i) =>
-    i % 2 === 1 ? `<span>${l}</span>` : '<span></span>'
-  ).join('');
+  // 12 month rows
+  const monthRows = MONTHS_SL.map((mLabel, m) => {
+    const daysInMonth = new Date(year, m + 1, 0).getDate();
+    const cells = Array.from({ length: 31 }, (_, d) => {
+      if (d >= daysInMonth) return '<div class="hm2-cell hm2-cell--out"></div>';
+      const day = d + 1;
+      const key = `${year}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const temp = dayMap.get(key);
+      const cls  = tempClass(temp);
+      const title = temp != null
+        ? `${day}. ${mLabel}: ${temp.toFixed(1)}°C`
+        : `${day}. ${mLabel}`;
+      return `<div class="hm2-cell${cls ? ' hm2-cell--data' : ''}" ${cls ? `data-t="${cls}"` : ''} title="${title}"></div>`;
+    }).join('');
+    return `<div class="hm2-row"><div class="hm2-month-lbl">${mLabel}</div>${cells}</div>`;
+  }).join('');
 
   wrap.innerHTML = `
-    <div style="display:flex;gap:0;align-items:flex-start">
-      <div class="heatmap-dow-labels">${dowLabels}</div>
-      <div style="overflow-x:auto;scrollbar-width:none">
-        <div class="heatmap-month-labels" style="padding-left:0">${monthLabelsHtml}</div>
-        <div class="heatmap-grid" style="grid-template-columns:repeat(${totalCols},11px)">
-          ${cells.join('')}
-        </div>
+    <div class="hm2-wrap">
+      <div class="hm2-header">
+        <div class="hm2-month-lbl"></div>${dayNums}
       </div>
+      ${monthRows}
     </div>`;
+}
+
+/** ——— Letni trend + klimatska anomalija ——— */
+function renderTrend(dailyByYear, years) {
+  const el = $('#trend-wrap');
+  if (!el) return;
+
+  const sorted = [...years].sort((a, b) => a - b);
+  const avgByYear = sorted.map((y) => {
+    const daily = dailyByYear[y] ?? [];
+    const temps = daily.filter((d) => d.avg != null).map((d) => d.avg);
+    return { year: y, avg: temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : null };
+  }).filter((r) => r.avg != null);
+
+  if (avgByYear.length < 2) { el.innerHTML = '<p class="forecast-loading">Premalo podatkov.</p>'; return; }
+
+  const overallAvg = avgByYear.reduce((s, r) => s + r.avg, 0) / avgByYear.length;
+  const minAvg = Math.min(...avgByYear.map(r => r.avg));
+  const maxAvg = Math.max(...avgByYear.map(r => r.avg));
+  const range = maxAvg - minAvg || 1;
+
+  const W = 280, H = 90, padL = 30, padR = 8, padT = 10, padB = 18;
+  const gW = W - padL - padR, gH = H - padT - padB;
+  const xStep = gW / (avgByYear.length - 1);
+  const yPos = (v) => padT + gH - ((v - minAvg) / range) * gH;
+
+  const pts = avgByYear.map((r, i) => ({ x: padL + i * xStep, y: yPos(r.avg), ...r }));
+  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const fill = `${line} L${pts.at(-1).x.toFixed(1)},${H - padB} L${pts[0].x.toFixed(1)},${H - padB} Z`;
+
+  // Avg line
+  const avgY = yPos(overallAvg);
+
+  const dots = pts.map((p) => {
+    const anom = p.avg - overallAvg;
+    const col = anom > 0.3 ? '#f87171' : anom < -0.3 ? '#60a5fa' : '#a3e635';
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="${col}" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
+      <title>${p.year}: ${p.avg.toFixed(2)}°C (${anom > 0 ? '+' : ''}${anom.toFixed(2)}°)</title>`;
+  });
+
+  const labels = pts.map((p) =>
+    `<text x="${p.x.toFixed(1)}" y="${H - 2}" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.35)" font-family="DM Sans,sans-serif">${p.year}</text>`
+  );
+
+  const yLabels = [minAvg, overallAvg, maxAvg].map((v) =>
+    `<text x="${padL - 3}" y="${yPos(v) + 3}" text-anchor="end" font-size="7" fill="rgba(255,255,255,0.3)" font-family="DM Sans,sans-serif">${v.toFixed(1)}°</text>`
+  );
+
+  el.innerHTML = `
+    <svg width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;padding:0.5rem 1rem">
+      <path d="${fill}" fill="rgba(251,146,60,0.1)"/>
+      <path d="${line}" fill="none" stroke="#f97316" stroke-width="1.5" stroke-linejoin="round"/>
+      <line x1="${padL}" y1="${avgY.toFixed(1)}" x2="${W - padR}" y2="${avgY.toFixed(1)}" stroke="rgba(255,255,255,0.15)" stroke-width="0.8" stroke-dasharray="3,3"/>
+      <text x="${W - padR - 2}" y="${avgY - 2}" text-anchor="end" font-size="6.5" fill="rgba(255,255,255,0.3)" font-family="DM Sans,sans-serif">avg ${overallAvg.toFixed(1)}°</text>
+      ${yLabels.join('')}
+      ${dots.join('')}
+      ${labels.join('')}
+    </svg>
+    <div class="trend-anomaly">
+      ${avgByYear.map((r) => {
+        const anom = r.avg - overallAvg;
+        const col = anom > 0.3 ? '#f87171' : anom < -0.3 ? '#60a5fa' : '#a3e635';
+        const h = Math.abs(anom) / Math.max(...avgByYear.map(x => Math.abs(x.avg - overallAvg))) * 28;
+        return `<div class="trend-anom-col" title="${r.year}: ${anom > 0 ? '+' : ''}${anom.toFixed(2)}°C">
+          ${anom > 0 ? `<div class="trend-anom-bar trend-anom-bar--pos" style="height:${h.toFixed(0)}px;background:${col}"></div><div class="trend-anom-spacer"></div>` : `<div class="trend-anom-spacer"></div><div class="trend-anom-bar trend-anom-bar--neg" style="height:${h.toFixed(0)}px;background:${col}"></div>`}
+          <span class="trend-anom-yr">${String(r.year).slice(2)}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+/** ——— Tekoči mesec vs povprečje ——— */
+function renderMonthVsAvg(dailyByYear, years) {
+  const el = $('#month-vs-avg');
+  const desc = $('#month-vs-avg-desc');
+  if (!el) return;
+
+  const now = new Date();
+  const curYear = now.getFullYear();
+  const curMonth = now.getMonth();
+  const curDay = now.getDate();
+
+  // Tekoči mesec
+  const curDaily = (dailyByYear[curYear] ?? []).filter((d) => d.date.getMonth() === curMonth);
+
+  // Klimatološko povprečje za ta mesec (brez tekočega leta)
+  const pastYears = years.filter((y) => y < curYear);
+  const histDays = {};
+  for (const y of pastYears) {
+    for (const d of (dailyByYear[y] ?? [])) {
+      if (d.date.getMonth() !== curMonth) continue;
+      const day = d.date.getDate();
+      if (!histDays[day]) histDays[day] = { temps: [], maxs: [], mins: [], rain: [] };
+      if (d.avg  != null) histDays[day].temps.push(d.avg);
+      if (d.max  != null) histDays[day].maxs.push(d.max);
+      if (d.min  != null) histDays[day].mins.push(d.min);
+      if (d.rain != null) histDays[day].rain.push(d.rain);
+    }
+  }
+  const avg = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+
+  const MONTHS_FULL = ['januar','februar','marec','april','maj','junij','julij','avgust','september','oktober','november','december'];
+  if (desc) desc.textContent = `${MONTHS_FULL[curMonth]} ${curYear} · primerjava s ${pastYears.join('–')}`;
+
+  if (!curDaily.length) { el.innerHTML = '<p class="forecast-loading">Ni podatkov za tekoči mesec.</p>'; return; }
+
+  // Metrike
+  const curTemps = curDaily.filter(d => d.avg != null).map(d => d.avg);
+  const curMaxs  = curDaily.filter(d => d.max != null).map(d => d.max);
+  const curMins  = curDaily.filter(d => d.min != null).map(d => d.min);
+  const curRain  = curDaily.reduce((s, d) => s + (d.rain ?? 0), 0);
+  const curHot   = curDaily.filter(d => d.max != null && d.max >= 30).length;
+
+  const histAllTemps = Object.values(histDays).flatMap(d => d.temps);
+  const histAllMaxs  = Object.values(histDays).flatMap(d => d.maxs);
+  const histAllMins  = Object.values(histDays).flatMap(d => d.mins);
+  const histRainSum  = pastYears.length ? pastYears.map((y) =>
+    (dailyByYear[y] ?? []).filter(d => d.date.getMonth() === curMonth).reduce((s, d) => s + (d.rain ?? 0), 0)
+  ).reduce((a, b) => a + b, 0) / pastYears.length : null;
+
+  const rows = [
+    { label: 'Povp. temperatura', cur: avg(curTemps), hist: avg(histAllTemps), unit: '°C', fmt: (v) => v?.toFixed(1) },
+    { label: 'Povp. maksimum',    cur: avg(curMaxs),  hist: avg(histAllMaxs),  unit: '°C', fmt: (v) => v?.toFixed(1) },
+    { label: 'Povp. minimum',     cur: avg(curMins),  hist: avg(histAllMins),  unit: '°C', fmt: (v) => v?.toFixed(1) },
+    { label: 'Skupaj padavine',   cur: curRain,        hist: histRainSum,        unit: ' mm', fmt: (v) => v?.toFixed(0) },
+    { label: 'Vroči dnevi ≥30°',  cur: curHot,         hist: null,               unit: ' dni', fmt: (v) => String(v) },
+  ];
+
+  el.innerHTML = rows.map((r) => {
+    const diff = r.cur != null && r.hist != null ? r.cur - r.hist : null;
+    const isAbove = diff != null && diff > 0;
+    const col = diff == null ? '' : Math.abs(diff) < 0.3 ? '#a3e635' : isAbove ? '#f87171' : '#60a5fa';
+    const diffStr = diff != null ? `${isAbove ? '+' : ''}${r.fmt(diff)}${r.unit}` : '';
+    return `<div class="mva-row">
+      <span class="mva-label">${r.label}</span>
+      <span class="mva-cur">${r.cur != null ? r.fmt(r.cur) + r.unit : '—'}</span>
+      <span class="mva-hist">${r.hist != null ? 'povp. ' + r.fmt(r.hist) + r.unit : ''}</span>
+      <span class="mva-diff" style="color:${col}">${diffStr}</span>
+    </div>`;
+  }).join('');
+}
+
+/** ——— Padavinski kalendar ——— */
+function renderRainCalendar(daily, year) {
+  const wrap = $('#rain-cal-wrap');
+  if (!wrap) return;
+
+  const dayMap = new Map();
+  for (const d of daily) {
+    const key = `${d.date.getFullYear()}-${String(d.date.getMonth()+1).padStart(2,'0')}-${String(d.date.getDate()).padStart(2,'0')}`;
+    dayMap.set(key, d.rain ?? 0);
+  }
+
+  function rainClass(mm) {
+    if (mm == null) return '';
+    if (mm < 0.1)  return 'dry';
+    if (mm < 2)    return 'r1';
+    if (mm < 5)    return 'r2';
+    if (mm < 15)   return 'r3';
+    if (mm < 30)   return 'r4';
+    return 'r5';
+  }
+
+  const dayNums = Array.from({ length: 31 }, (_, i) =>
+    `<div class="hm2-day-num">${i + 1}</div>`
+  ).join('');
+
+  const monthRows = MONTHS_SL.map((mLabel, m) => {
+    const daysInMonth = new Date(year, m + 1, 0).getDate();
+    const cells = Array.from({ length: 31 }, (_, d) => {
+      if (d >= daysInMonth) return '<div class="hm2-cell hm2-cell--out"></div>';
+      const day = d + 1;
+      const key = `${year}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const mm = dayMap.has(key) ? dayMap.get(key) : null;
+      const cls = rainClass(mm);
+      const title = mm != null ? `${day}. ${mLabel}: ${mm.toFixed(1)} mm` : `${day}. ${mLabel}`;
+      return `<div class="hm2-cell rc-cell${cls ? ' rc-' + cls : ''}" title="${title}"></div>`;
+    }).join('');
+    return `<div class="hm2-row"><div class="hm2-month-lbl">${mLabel}</div>${cells}</div>`;
+  }).join('');
+
+  wrap.innerHTML = `<div class="hm2-wrap">
+    <div class="hm2-header"><div class="hm2-month-lbl"></div>${dayNums}</div>
+    ${monthRows}
+  </div>`;
 }
 
 /** ——— Nalaganje podatkov ——— */
@@ -345,7 +591,19 @@ async function loadAndRender() {
     }
 
     renderAllTimeRecords(allDaily, years);
+    renderYearCompare(dailyByYear, years);
+    renderTrend(dailyByYear, years);
+    renderMonthVsAvg(dailyByYear, years);
     renderMonthlyClimate(allDaily);
+
+    // Rain calendar year selector
+    const rainSel = $('#rain-cal-year');
+    if (rainSel && !rainSel.options.length) {
+      [...years].reverse().forEach((y) => rainSel.append(new Option(String(y), String(y))));
+      rainSel.value = String(years[years.length - 1]);
+      rainSel.addEventListener('change', (e) => renderRainCalendar(dailyByYear[Number(e.target.value)] ?? [], Number(e.target.value)));
+    }
+    renderRainCalendar(dailyByYear[Number(rainSel?.value ?? years[years.length - 1])] ?? [], Number(rainSel?.value ?? years[years.length - 1]));
 
     // Rekordi po letu
     const yrSel = $('#year-records-select');

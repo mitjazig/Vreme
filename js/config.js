@@ -17,8 +17,8 @@ export const YEAR_SHEETS = {
   2024: '2024data',
   2023: '2023 -data',
   2022: '2022 - data',
-  2021: '2021 -data',
-  2020: '2020 data',
+  2021: 1803337079,
+  2020: 1327738696,
 };
 
 export const REFRESH_MS = 5 * 60 * 1000;
