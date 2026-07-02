@@ -55,15 +55,23 @@ function parseGvizDate(v) {
   return null;
 }
 
+function isHeaderLabel(label) {
+  if (!label) return false;
+  if (!isNaN(Number(label))) return false;       // pure number → data value
+  if (/^\d{4}-\d{2}-\d{2}/.test(label)) return false; // ISO date → data value
+  return true;
+}
+
 export function rowsToObjects(table) {
-  const labels = table.cols.map((c) => (c.label || '').trim());
+  const cols = table.cols;
   return table.rows.map((row) => {
     const obj = {};
     row.c.forEach((cell, i) => {
-      const key = labels[i] || `col${i}`;
+      const col = cols[i];
+      const label = (col.label || '').trim();
+      const key = isHeaderLabel(label) ? label : (col.id || `col${i}`);
       let val = cellValue(cell);
-      const label = labels[i];
-      if (label === 'Date' || label === 'Obstimeutc') {
+      if (key === 'Date' || key === 'Obstimeutc' || key === 'B') {
         const parsed = parseGvizDate(val) ?? (val ? new Date(val) : null);
         val = parsed && !Number.isNaN(parsed.getTime()) ? parsed : val;
       }
@@ -151,25 +159,39 @@ function dateQueryLiteral(d) {
 }
 
 export async function fetchReadingsRange(start, end, year) {
-  const sheet = sheetForYear(year);
+  const sheetRef = sheetForYear(year);
+  const sheetParam = typeof sheetRef === 'number'
+    ? { gid: sheetRef }
+    : { sheet: sheetRef };
   const q = [
     'select B,C,O,M,L,S,T,U,V,W,K,G,Q',
     `where C >= ${dateQueryLiteral(start)} and C < ${dateQueryLiteral(end)}`,
     'order by C asc',
   ].join(' ');
-  const rows = await fetchGviz({ sheet, query: q });
-  return rows.map(normalizeReading).filter((r) => r.time);
+  let rows = await fetchGviz({ ...sheetParam, query: q });
+
+  // Fallback for sheets where col C is stored as numeric serial (not datetime):
+  // fetch all rows and filter by time in JS.
+  if (rows.length === 0 && typeof sheetRef === 'number') {
+    const allRows = await fetchGviz({ ...sheetParam, query: 'select B,C,O,M,L,S,T,U,V,W,K,G,Q' });
+    rows = allRows;
+  }
+
+  return rows
+    .map(normalizeReading)
+    .filter((r) => r.time && r.time >= start && r.time < end);
 }
 
 async function fetchPrecipTotalBefore(date, year) {
-  const sheet = sheetForYear(year);
+  const sheetRef = sheetForYear(year);
+  const sheetParam = typeof sheetRef === 'number' ? { gid: sheetRef } : { sheet: sheetRef };
   const q = [
     'select Q',
     `where C < ${dateQueryLiteral(date)} and Q is not null`,
     'order by C desc limit 1',
   ].join(' ');
   try {
-    const rows = await fetchGviz({ sheet, query: q });
+    const rows = await fetchGviz({ ...sheetParam, query: q });
     const row = rows[0] ?? {};
     return num(Object.values(row).find((x) => x != null) ?? null);
   } catch {
@@ -247,26 +269,32 @@ function pick(row, ...keys) {
 }
 
 function normalizeReading(row) {
-  const time =
-    row.Date instanceof Date
-      ? row.Date
-      : pick(row, 'Obstimeutc')
-        ? new Date(pick(row, 'Obstimeutc'))
-        : null;
+  // Named-column sheets: Date/Obstimeutc; fallback to col-ID sheets (B = Obstimeutc)
+  let time = null;
+  if (row.Date instanceof Date) {
+    time = row.Date;
+  } else if (row.B instanceof Date) {
+    time = row.B;
+  } else {
+    const raw = pick(row, 'Obstimeutc');
+    if (raw) time = new Date(raw);
+  }
 
   return {
     time,
-    temp: num(pick(row, 'Temp')),
-    humidity: num(pick(row, 'Humidity')),
-    windDir: num(pick(row, 'Winddir')),
-    windSpeed: num(pick(row, 'Windspeed')),
-    windGust: num(pick(row, 'Windgust')),
-    pressure: num(pick(row, 'Pressure')),
-    precipRate: num(pick(row, 'Preciprate')),
-    precipTotal: num(pick(row, 'Preciptotal')),
-    uv: num(pick(row, 'Uv')),
-    solar: num(pick(row, 'Solarradiation')),
-    dewpt: num(pick(row, 'Dewpt')),
+    // Named cols first, then col-ID fallbacks (O=Temp, M=Humidity, L=Winddir, S=Windspeed,
+    // T=Windgust, U=Pressure, V=Preciprate, W=DailyRain, K=UV, G=Solar, Q=Preciptotal)
+    temp:        num(pick(row, 'Temp')          ?? row.O),
+    humidity:    num(pick(row, 'Humidity')       ?? row.M),
+    windDir:     num(pick(row, 'Winddir')        ?? row.L),
+    windSpeed:   num(pick(row, 'Windspeed')      ?? row.S),
+    windGust:    num(pick(row, 'Windgust')       ?? row.T),
+    pressure:    num(pick(row, 'Pressure')       ?? row.U),
+    precipRate:  num(pick(row, 'Preciprate')     ?? row.V),
+    precipTotal: num(pick(row, 'Preciptotal')    ?? row.Q),
+    uv:          num(pick(row, 'Uv')             ?? row.K),
+    solar:       num(pick(row, 'Solarradiation') ?? row.G),
+    dewpt:       num(pick(row, 'Dewpt')),
   };
 }
 
