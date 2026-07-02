@@ -124,6 +124,55 @@ function renderAllTimeRecords(allDaily, years) {
     </div>`).join('');
 }
 
+/** ——— Rekordi po izbranem letu ——— */
+function renderYearRecords(daily, year) {
+  const el = $('#year-records-grid');
+  const desc = $('#year-records-desc');
+  if (!el) return;
+
+  if (!daily?.length) {
+    el.innerHTML = '<p class="forecast-loading">Ni podatkov za to leto.</p>';
+    if (desc) desc.textContent = String(year);
+    return;
+  }
+
+  let hotDay = null, coldDay = null, rainDay = null, windDay = null;
+  for (const d of daily) {
+    if (d.max  != null && (hotDay  == null || d.max  > hotDay.max))    hotDay  = d;
+    if (d.min  != null && (coldDay == null || d.min  < coldDay.min))   coldDay = d;
+    if (d.rain != null && (rainDay == null || d.rain > rainDay.rain))  rainDay = d;
+    if (d.windMax != null && (windDay == null || d.windMax > windDay.windMax)) windDay = d;
+  }
+
+  const hotDays  = daily.filter((d) => d.max != null && d.max >= 30).length;
+  const coldDays = daily.filter((d) => d.min != null && d.min <= 0).length;
+  const rainDays = daily.filter((d) => d.rain != null && d.rain > 0.1).length;
+  const totalRain = daily.reduce((s, d) => s + (d.rain ?? 0), 0);
+  const avgTemps = daily.filter((d) => d.avg != null);
+  const avgYear  = avgTemps.length ? avgTemps.reduce((s, d) => s + d.avg, 0) / avgTemps.length : null;
+
+  if (desc) desc.textContent = `${year} · ${daily.length} dni meritev`;
+
+  const items = [
+    { cls: 'hot',  icon: '🌡️', label: 'Najtoplejši dan',    val: hotDay  ? `${hotDay.max.toFixed(1)}°C`     : '—', date: hotDay  ? fmtDate(hotDay.maxTime  ?? hotDay.date)  : '' },
+    { cls: 'cold', icon: '❄️', label: 'Najhladnejši dan',   val: coldDay ? `${coldDay.min.toFixed(1)}°C`    : '—', date: coldDay ? fmtDate(coldDay.minTime ?? coldDay.date) : '' },
+    { cls: 'rain', icon: '🌧️', label: 'Največ dežja v dnevu', val: rainDay ? `${rainDay.rain.toFixed(1)} mm` : '—', date: rainDay ? fmtDate(rainDay.date) : '' },
+    { cls: 'wind', icon: '💨', label: 'Najmočnejši sunek',  val: windDay ? `${windDay.windMax.toFixed(1)} m/s` : '—', date: windDay ? fmtDate(windDay.date) : '' },
+    { cls: '',     icon: '🌡️', label: 'Povprečna temp.',    val: avgYear != null ? `${avgYear.toFixed(1)}°C` : '—', date: '' },
+    { cls: 'rain', icon: '💧', label: 'Skupne padavine',    val: `${totalRain.toFixed(0)} mm`, date: `${rainDays} deževnih dni` },
+    { cls: '',     icon: '🔥', label: 'Vroči dnevi (≥30°)', val: `${hotDays}`, date: '' },
+    { cls: '',     icon: '🧊', label: 'Mrzle noči (≤0°)',   val: `${coldDays}`, date: '' },
+  ];
+
+  el.innerHTML = items.map((item) => `
+    <div class="record-item${item.cls ? ' record-item--' + item.cls : ''}">
+      <span class="record-item__icon">${item.icon}</span>
+      <span class="record-item__label">${item.label}</span>
+      <span class="record-item__val">${item.val}</span>
+      ${item.date ? `<span class="record-item__date">${item.date}</span>` : ''}
+    </div>`).join('');
+}
+
 /** ——— Mesečna klimatologija ——— */
 function renderMonthlyClimate(allDaily) {
   const el = $('#monthly-climate');
@@ -297,6 +346,18 @@ async function loadAndRender() {
 
     renderAllTimeRecords(allDaily, years);
     renderMonthlyClimate(allDaily);
+
+    // Rekordi po letu
+    const yrSel = $('#year-records-select');
+    if (yrSel && !yrSel.options.length) {
+      [...years].reverse().forEach((y) => yrSel.append(new Option(String(y), String(y))));
+      yrSel.value = String(years[years.length - 1]);
+      yrSel.addEventListener('change', (e) => {
+        const y = Number(e.target.value);
+        renderYearRecords(dailyByYear[y] ?? [], y);
+      });
+    }
+    renderYearRecords(dailyByYear[Number(yrSel?.value ?? years[years.length - 1])] ?? [], Number(yrSel?.value ?? years[years.length - 1]));
 
     populateYearSelect(years);
     const selYear = Number($('#heatmap-year')?.value ?? years[years.length - 1]);

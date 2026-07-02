@@ -1,8 +1,7 @@
 import { initPwaUpdates } from './pwa-update.js';
-import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides, fetchFireDanger, fetchLocationForecast, reverseGeocode } from './forecast.js';
+import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides, fetchFireDanger, fetchLocationForecast, reverseGeocode, fetchWarnings, fetchWindyWaves } from './forecast.js';
 import { moonPhase, STATION_LAT, STATION_LON } from './astro.js';
 import { LightningTracker } from './lightning.js';
-import { fetchAlerts, alertCls, alertLabel } from './alerts.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -13,20 +12,6 @@ function setStatus(msg, isError = false) {
   el.classList.toggle('status--error', isError);
 }
 
-function renderAlerts(alerts) {
-  const el = $('#alerts-container');
-  if (!el) return;
-  if (!alerts?.length) { el.innerHTML = ''; return; }
-  el.innerHTML = alerts.map((a) => `
-    <div class="alert-banner ${alertCls(a.severity)}" role="alert">
-      <span class="alert-banner__icon">⚠️</span>
-      <div class="alert-banner__body">
-        <strong>${alertLabel(a.severity)}</strong>
-        <span>${a.event || a.title}</span>
-      </div>
-    </div>
-  `).join('');
-}
 
 function renderForecast(days) {
   const el = $('#forecast-days');
@@ -399,6 +384,45 @@ async function initLocationForecast() {
   });
 }
 
+/** —— Valovi (Windy) —— */
+function renderWaves(points) {
+  const el = document.getElementById('waves-content');
+  if (!el) return;
+  if (!points?.length) { el.innerHTML = '<p class="forecast-loading">Ni podatkov.</p>'; return; }
+
+  const DIR_LABELS = ['S','SSV','SV','VSV','V','VJV','JV','JJV','J','JJZ','JZ','ZJZ','Z','ZSZ','SZ','SSZ'];
+  function dirLabel(deg) { return DIR_LABELS[Math.round(deg / 22.5) % 16] ?? '—'; }
+  function waveColor(h) {
+    if (h < 0.1) return '#38bdf8';
+    if (h < 0.3) return '#34d399';
+    if (h < 0.6) return '#a3e635';
+    if (h < 1.0) return '#fbbf24';
+    if (h < 2.0) return '#f97316';
+    return '#f43f5e';
+  }
+
+  // Grupiranje po dnevu
+  let lastDate = null;
+  const rows = points.map(p => {
+    const dateStr = p.time.toLocaleDateString('sl-SI', { weekday: 'short', day: 'numeric', month: 'numeric' });
+    const timeStr = p.time.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' });
+    const isNewDay = dateStr !== lastDate;
+    if (isNewDay) lastDate = dateStr;
+    const h = p.height ?? 0;
+    const color = waveColor(h);
+    const arrowStyle = p.dir != null ? `transform:rotate(${p.dir}deg);display:inline-block` : 'display:none';
+    return `${isNewDay ? `<div class="waves-day-sep">${dateStr}</div>` : ''}
+    <div class="waves-row">
+      <span class="waves-row__time">${timeStr}</span>
+      <span class="waves-row__h" style="color:${color}">${h.toFixed(2)} m</span>
+      <span class="waves-row__dir"><span style="${arrowStyle}">↑</span> ${p.dir != null ? dirLabel(p.dir) : '—'}</span>
+      <span class="waves-row__per">${p.period != null ? p.period.toFixed(1) + ' s' : '—'}</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="waves-list">${rows}</div>`;
+}
+
 /** —— Radar zemljevid (Leaflet + RainViewer) —— */
 let radarMap = null;
 let radarFrames = [];
@@ -572,16 +596,38 @@ function initLightningMap() {
   setInterval(() => lightningTracker?.refreshColors(), 60_000);
 }
 
+function renderWarnings(warnings) {
+  const el = document.getElementById('warn-list');
+  const card = document.getElementById('warn-card');
+  if (!el) return;
+  if (!warnings?.length) {
+    el.innerHTML = '<p class="warn-none">✅ Ni opozoril za naslednjih 7 dni.</p>';
+    return;
+  }
+  const LEVEL_COLOR = { yellow: '#fbbf24', orange: '#f97316', red: '#f43f5e' };
+  el.innerHTML = warnings.map(w => `
+    <div class="warn-row warn-row--${w.level}">
+      <span class="warn-row__bar" style="background:${LEVEL_COLOR[w.level]}"></span>
+      <span class="warn-row__icon">${w.icon}</span>
+      <div class="warn-row__body">
+        <span class="warn-row__title">${w.title}</span>
+        <span class="warn-row__desc">${w.desc}</span>
+      </div>
+      <span class="warn-row__badge warn-row__badge--${w.level}">${w.level === 'yellow' ? 'Rumena' : w.level === 'orange' ? 'Oranžna' : 'Rdeča'}</span>
+    </div>`).join('');
+}
+
 async function load() {
   setStatus('Nalagam napoved…');
   try {
-    const [forecast, hourly, alerts, sea, aq, fire] = await Promise.allSettled([
+    const [forecast, hourly, sea, aq, fire, warnings, waves] = await Promise.allSettled([
       fetchForecast(),
       fetchHourlyForecast(),
-      fetchAlerts(),
       fetchSeaTemp(),
       fetchAirQuality(),
       fetchFireDanger(),
+      fetchWarnings(),
+      fetchWindyWaves(),
     ]);
 
     if (forecast.status === 'fulfilled') renderForecast(forecast.value);
@@ -589,8 +635,6 @@ async function load() {
 
     if (hourly.status === 'fulfilled') renderHourly(hourly.value);
     else renderHourly(null);
-
-    if (alerts.status === 'fulfilled') renderAlerts(alerts.value);
 
     if (sea.status === 'fulfilled') renderSeaTemp(sea.value);
     else renderSeaTemp(null);
@@ -600,6 +644,12 @@ async function load() {
 
     if (fire.status === 'fulfilled') renderFireDanger(fire.value);
     else renderFireDanger(null);
+
+    if (warnings.status === 'fulfilled') renderWarnings(warnings.value);
+    else renderWarnings([]);
+
+    if (waves.status === 'fulfilled') renderWaves(waves.value);
+    else renderWaves(null);
 
     // Plima se računa lokalno, ne zahteva API klica
     renderTides();
@@ -616,6 +666,41 @@ function refreshArsoRadar() {
   if (!img) return;
   img.src = `https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif?t=${Date.now()}`;
   if (info) info.textContent = `Posodobljeno: ${new Date().toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+/** —— Satelitska slika (EUMETSAT WMS) —— */
+let satLayer = 'msg_fes:rgb_naturalenhncd';
+
+function satelliteUrl(layer) {
+  const bbox = '7,42,22,50'; // Slovenija + širša okolica
+  return `https://view.eumetsat.int/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap`
+    + `&LAYERS=${encodeURIComponent(layer)}&BBOX=${bbox}&WIDTH=700&HEIGHT=460`
+    + `&SRS=EPSG:4326&FORMAT=image/jpeg&t=${Date.now()}`;
+}
+
+function refreshSatellite() {
+  const img = document.getElementById('satellite-img');
+  const info = document.getElementById('satellite-updated');
+  if (!img) return;
+  const newImg = new Image();
+  newImg.onload = () => {
+    img.src = newImg.src;
+    if (info) info.textContent = `Posodobljeno: ${new Date().toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })}`;
+  };
+  newImg.src = satelliteUrl(satLayer);
+}
+
+function initSatellite() {
+  document.querySelectorAll('.sat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.sat-btn').forEach(b => b.classList.remove('sat-btn--active'));
+      btn.classList.add('sat-btn--active');
+      satLayer = btn.dataset.layer;
+      refreshSatellite();
+    });
+  });
+  refreshSatellite();
+  setInterval(refreshSatellite, 15 * 60 * 1000);
 }
 
 async function init() {
@@ -639,6 +724,9 @@ async function init() {
   // ARSO GIF
   refreshArsoRadar();
   setInterval(refreshArsoRadar, 10 * 60 * 1000);
+
+  // Satelit
+  initSatellite();
 }
 
 init();

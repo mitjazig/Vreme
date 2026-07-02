@@ -160,6 +160,86 @@ function renderDaily(days) {
   }).join('');
 }
 
+/** Aktivnosti */
+function renderActivities(current, today) {
+  const el = document.getElementById('loc-activities');
+  if (!el || !current) return;
+
+  const temp  = current.temp  ?? 20;
+  const gust  = current.gust  ?? 0;
+  const code  = current.code  ?? 0;
+  const rain  = today?.rain   ?? 0;
+  const uvMax = today?.uvMax  ?? 0;
+  const wind  = current.wind  ?? 0;
+
+  const isStorm = code >= 95;
+  const isRain  = code >= 51 || rain > 5;
+  const isHot   = temp > 34;
+
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(v)));
+
+  const items = [
+    {
+      icon: '🏖️', label: 'Plaža',
+      score: clamp(
+        (temp >= 28 ? 9 : temp >= 24 ? 7 : temp >= 20 ? 4 : 1)
+        - (gust > 40 ? 3 : gust > 25 ? 1 : 0)
+        - (isRain ? 6 : 0) - (isStorm ? 8 : 0), 0, 10),
+    },
+    {
+      icon: '🚴', label: 'Kolesarjenje',
+      score: clamp(
+        (temp >= 14 && temp <= 30 ? 8 : temp >= 10 ? 5 : 2)
+        - (gust > 50 ? 4 : gust > 30 ? 2 : 0)
+        - (isRain ? 4 : 0) - (isStorm ? 7 : 0), 0, 10),
+    },
+    {
+      icon: '🥾', label: 'Pohodništvo',
+      score: clamp(
+        (temp >= 8 && temp <= 30 ? 8 : temp >= 5 ? 5 : 2)
+        + (code <= 1 ? 2 : 0)
+        - (gust > 60 ? 3 : 0)
+        - (isRain ? 3 : 0) - (isStorm ? 6 : 0), 0, 10),
+    },
+    {
+      icon: '⛵', label: 'Jadranje',
+      score: clamp(
+        (wind >= 10 && wind <= 35 ? 9 : wind >= 5 ? 5 : wind > 35 ? 3 : 2)
+        - (isStorm ? 8 : 0) - (code >= 61 ? 2 : 0), 0, 10),
+    },
+    {
+      icon: '🌿', label: 'Piknik',
+      score: clamp(
+        (temp >= 18 && temp <= 32 ? 8 : temp >= 15 ? 5 : 2)
+        + (code <= 1 ? 2 : 0)
+        - (gust > 35 ? 2 : 0)
+        - (isRain ? 5 : 0) - (isStorm ? 8 : 0), 0, 10),
+    },
+    {
+      icon: '🏊', label: 'Plavanje',
+      score: clamp(
+        (temp >= 27 ? 9 : temp >= 23 ? 6 : temp >= 18 ? 3 : 0)
+        - (isStorm ? 8 : 0) - (isRain ? 2 : 0), 0, 10),
+    },
+  ];
+
+  el.innerHTML = items.map(a => {
+    const pct = a.score * 10;
+    const color = a.score >= 8 ? '#34d399' : a.score >= 6 ? '#a3e635' : a.score >= 4 ? '#fbbf24' : '#f87171';
+    const label = a.score >= 8 ? 'Odlično' : a.score >= 6 ? 'Dobro' : a.score >= 4 ? 'Zmerno' : 'Slabo';
+    return `<div class="act-row">
+      <span class="act-row__icon">${a.icon}</span>
+      <div class="act-row__body">
+        <div class="act-row__top">
+          <span class="act-row__name">${a.label}</span>
+          <span class="act-row__score" style="color:${color}">${label}</span>
+        </div>
+        <div class="act-bar"><div class="act-bar__fill" style="width:${pct}%;background:${color}"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 /** Snežna napoved */
 function renderSnow(daily, hourly) {
   const el = document.getElementById('loc-snow');
@@ -243,6 +323,7 @@ function renderHourly(hours) {
   }).join('')}</div>`;
 }
 
+
 function showForecast() {
   $('loc-empty').classList.add('hidden');
   $('loc-forecast').classList.remove('hidden');
@@ -269,12 +350,12 @@ async function loadForecast(lat, lon, nameHint = null) {
     document.title = `${name} – Vreme`;
 
     renderCurrent(data.current, name);
+    renderActivities(data.current, data.daily[0]);
     renderBbq(data.current, data.daily[0]);
     renderSnow(data.daily, data.hourly);
     renderDaily(data.daily);
     renderHourly(data.hourly);
     showForecast();
-
     setStatus(`Posodobljeno ${new Date().toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })}`);
 
     // Shrani lokacijo za naslednji obisk
