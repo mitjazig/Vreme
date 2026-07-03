@@ -1,4 +1,4 @@
-const CACHE = 'vreme-pwa-static-v26';
+const CACHE = 'vreme-pwa-static-v28';
 
 const ASSETS = [
   './',
@@ -26,6 +26,7 @@ const ASSETS = [
   './js/sreca-page.js',
   './js/wind-rose.js',
   './js/notifications.js',
+  './js/agro.js',
   './js/arso-stations.js',
   './js/postaje-page.js',
   './postaje.html',

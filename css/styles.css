@@ -1045,6 +1045,69 @@ body {
   height: 200px;
 }
 
+.agro-type {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.agro-type__badge {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  width: fit-content;
+}
+.agro-type__sign { font-size: 0.78rem; color: rgba(255,255,255,0.45); }
+.agro-type__tip  { font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.45; margin: 0; }
+.agro-phase      { font-size: 0.8rem;  color: rgba(255,255,255,0.55); margin: 0; font-style: italic; }
+.agro-wood           { font-size: 0.8rem; color: #a78bfa; margin: 0; }
+.agro-wood--next     { color: rgba(255,255,255,0.45); }
+.agro-wood--next strong { color: #a78bfa; }
+
+.agro-sow        { padding-top: 4px; }
+.agro-sow__head  { font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 8px; }
+.agro-sow__grid  { display: flex; flex-direction: column; gap: 6px; }
+.agro-sow__item  { display: flex; align-items: flex-start; gap: 10px; }
+.agro-sow__icon  { font-size: 1.2rem; flex-shrink: 0; width: 1.5rem; text-align: center; }
+.agro-sow__crop  { display: block; font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.8); }
+.agro-sow__action{ display: block; font-size: 0.75rem; color: rgba(255,255,255,0.45); }
+
+.month-summary { padding: 12px 16px; }
+.ms-head { font-size: 0.8rem; color: rgba(255,255,255,0.45); margin-bottom: 10px; text-transform: capitalize; }
+.ms-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.ms-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.ms-lbl  { font-size: 0.7rem; color: rgba(255,255,255,0.4); }
+.ms-val  { font-size: 1rem; font-weight: 600; color: rgba(255,255,255,0.85); }
+.ms-val--cold { color: #7dd3fc; }
+.ms-val--hot  { color: #fb923c; }
+.ms-val--rain { color: #818cf8; }
+
+.sunrise-days {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0;
+}
+.sun-day {
+  display: grid;
+  grid-template-columns: 2.8rem 1fr 1fr 2.8rem;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  padding: 5px 2px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.sun-day:last-child { border-bottom: none; }
+.sun-day__lbl { color: rgba(255,255,255,0.5); font-size: 0.75rem; }
+.sun-day__rise { color: #facc15; }
+.sun-day__set  { color: #94a3b8; }
+.sun-day__len  { color: rgba(255,255,255,0.4); font-size: 0.73rem; text-align: right; }
+
 .chart-wrap--tall {
   height: 260px;
 }

@@ -385,6 +385,114 @@ async function initLocationForecast() {
   });
 }
 
+/** —— Graf temperature —— */
+let tempChart = null;
+
+function renderTempChart(hours) {
+  const canvas = document.getElementById('chart-temp');
+  if (!canvas || !hours?.length) return;
+
+  const sampled = hours.filter((_, i) => i % 3 === 0);
+
+  if (tempChart) { tempChart.destroy(); tempChart = null; }
+
+  tempChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: sampled.map((h) => h.time.toISOString()),
+      datasets: [
+        {
+          label: 'Temperatura (°C)',
+          data: sampled.map((h) => h.temp != null ? +h.temp.toFixed(1) : null),
+          borderColor: 'rgba(251,146,60,0.9)',
+          backgroundColor: 'rgba(251,146,60,0.1)',
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.4,
+        },
+        {
+          label: 'Občutek (°C)',
+          data: sampled.map((h) => h.feel != null ? +h.feel.toFixed(1) : null),
+          borderColor: 'rgba(148,163,184,0.6)',
+          backgroundColor: 'rgba(148,163,184,0.05)',
+          borderWidth: 1.5,
+          borderDash: [4, 3],
+          pointRadius: 0,
+          fill: false,
+          tension: 0.4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          labels: { color: 'rgba(255,255,255,0.55)', font: { size: 11 }, boxWidth: 12, padding: 12 },
+        },
+        tooltip: {
+          backgroundColor: 'rgba(7,15,26,0.92)',
+          titleColor: 'rgba(255,255,255,0.7)',
+          bodyColor: 'rgba(255,255,255,0.85)',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: 'rgba(255,255,255,0.35)',
+            font: { size: 9 },
+            maxRotation: 0,
+            autoSkip: false,
+            callback(val, i) {
+              const h = sampled[i];
+              if (!h) return '';
+              if (i === 0) return h.time.toLocaleDateString('sl-SI', { weekday: 'short', day: 'numeric' });
+              const prev = sampled[i - 1];
+              if (prev && h.time.getDate() !== prev.time.getDate())
+                return h.time.toLocaleDateString('sl-SI', { weekday: 'short', day: 'numeric' });
+              return '';
+            },
+          },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+        },
+        y: {
+          ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 10 },
+            callback: (v) => v + '°' },
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          title: { display: true, text: '°C', color: 'rgba(255,255,255,0.3)', font: { size: 10 } },
+        },
+      },
+    },
+  });
+}
+
+/** —— Sončni vzhod/zahod po dnevih —— */
+function renderSunriseDays(days) {
+  const el = document.getElementById('sunrise-days');
+  if (!el || !days?.length) return;
+  const fmt = (d) => d ? d.toLocaleTimeString('sl-SI', {
+    timeZone: 'Europe/Ljubljana', hour: '2-digit', minute: '2-digit',
+  }) : '—';
+  const DAY_SL = ['ned', 'pon', 'tor', 'sre', 'čet', 'pet', 'sob'];
+  el.innerHTML = days.map((d, i) => {
+    if (!d.sunrise || !d.sunset) return '';
+    const label = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : DAY_SL[d.date.getDay()];
+    const diffMs = d.sunset - d.sunrise;
+    const h = Math.floor(diffMs / 3_600_000);
+    const m = Math.floor((diffMs % 3_600_000) / 60_000);
+    return `<div class="sun-day">
+      <span class="sun-day__lbl">${label}</span>
+      <span class="sun-day__rise">☀️ ${fmt(d.sunrise)}</span>
+      <span class="sun-day__set">🌙 ${fmt(d.sunset)}</span>
+      <span class="sun-day__len">${h}h ${m}m</span>
+    </div>`;
+  }).join('');
+}
+
 /** —— Valovi (Windy) —— */
 let windChart = null;
 
@@ -755,6 +863,9 @@ async function load() {
 
     if (windFc.status === 'fulfilled') renderWindChart(windFc.value);
     else renderWindChart([]);
+
+    if (hourly.status === 'fulfilled') renderTempChart(hourly.value);
+    if (forecast.status === 'fulfilled') renderSunriseDays(forecast.value);
 
     // Plima se računa lokalno, ne zahteva API klica
     renderTides();

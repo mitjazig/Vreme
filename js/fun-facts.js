@@ -45,7 +45,53 @@ const TRIVIA = [
   'Jadran se je v zadnjih 50 letih segrel za ~1,5°C — kar vpliva na intenzivnost neviht in moč juga.',
 ];
 
-// ——— 2. Dinamična dejstva iz meritev ——————————————————————————————————
+// ——— 2. Datumski vremenski pregovori ————————————————————————————————————
+// Format: [mesec, dan, pregovor]
+const DATE_PROVERBS = [
+  [1,  1,  'Kakršno vreme je na Novo leto, takšno bo celo leto — staro slovensko izročilo.'],
+  [1,  6,  'Na sv. Tri kralje (6. jan.) gre burja na počitnice ali pa pride z vso silo — vmesnega ni.'],
+  [1, 20,  'Sv. Fabijan in Sebastijan (20. jan.): "Kdor na Fabijana seje, do sv. Jurija žanje."'],
+  [2,  2,  'Svečnica (2. feb.): "Kadar Svečnica sveti, zima se podi; kadar Svečnica joče, zima se noče." — Če je jasno, zima traja dlje.'],
+  [2, 14,  'Sv. Valentin (14. feb.): po starem slovenskem izročilu začnejo ptice iskati par — znak da je najhujši del zime mimo.'],
+  [2, 24,  'Sv. Matija (24. feb.): "Sv. Matija led razbija ali pa ga naredi." — Na ta dan se vreme odloči za ali proti pomladi.'],
+  [3, 12,  '"Gregorjevo (12. mar.) — dan in noč enako." Blizu spomladanskega ekvinokcija, ko je dan enako dolg kot noč.'],
+  [3, 19,  'Sv. Jožef (19. mar.): "Kadar sv. Jožef v rokavicah hodi, pomlad po snegu prihodi."'],
+  [4,  1,  '"April, april, dela kar mu je drago" — aprilsko vreme je pri nas znano po hitrih preobratih med soncem, točo in snegom.'],
+  [4, 23,  'Sv. Jurij (23. apr.): "Na sv. Jurija trava raste čez kopita." Jurjevo je mejnik pomladi — po njem naj bi bila paša že mogoča.'],
+  [5,  1,  'Prvomajska rosa: "Kdor se umije z majsko roso, bo zdrav celo leto." — Staro kmečko izročilo s Krasa.'],
+  [5, 12,  '"Ledeni možje" (12.–14. maj — sv. Pankracij, Servacij, Bonifacij): zadnji nevarni dnevi za pozebo. Vrtičkarji počakajo z sajenjem.'],
+  [5, 15,  'Sv. Zofija (15. maj) — "Hladna Zofija" zaključi ledene može. Po njej so jutranje pozebe redke.'],
+  [6,  8,  'Sv. Medard (8. jun.): "Sv. Medard deževen — štirideset dni deževen." Meteorologi pravijo: drži ~50% časa.'],
+  [6, 21,  'Poletni solsticij — najdaljši dan leta. Na Krasu pravijo: "Po sv. Ivanu (24. jun.) dnevi krajšajo, burja pa se krepi."'],
+  [7, 25,  'Sv. Jakob (25. jul.): "Po sv. Jakobu sonce nazaj korako." Dan se opazno krajša, poletje je v vrhuncu.'],
+  [8, 10,  'Sv. Lovrenc (10. avg.): "Sv. Lovrenc rose meče." Prve jutranje rose naznanjajo konec poletja.'],
+  [8, 15,  'Velika Mašnjica (15. avg.): "Po Veliki Mašnjici bele nogavice." Na Krasu to pomeni prve megle v dolinah zjutraj.'],
+  [8, 24,  'Sv. Bart (24. avg.): "Sv. Bart kožuh part." Po njem so noči hladnejše, jesenska burja se zbuja.'],
+  [9,  1,  '"September — vreme se obrne." Jadransko morje je najtoplejše, a nevihte postajajo pogostejše in intenzivnejše.'],
+  [9, 29,  'Sv. Mihael (29. sep.): "Po Mihaelu zima kaplje z neba." Jesenski deževni čas se začenja.'],
+  [10, 18, 'Sv. Luka (18. okt.): "Sv. Luka belo kapo puka." Na ta dan se prvič pojavi sneg na Snežniku in Nanosu.'],
+  [10, 28, 'Sv. Simon in Juda (28. okt.): "Simon in Juda — v hišo buda." Čas za zatesnitev oken pred burjo.'],
+  [11, 11, 'Sv. Martin (11. nov.): "Sv. Martin pride na belem konju." Pogosto prvi sneg ali slana. In seveda — mošt postane vino!'],
+  [11, 25, 'Sv. Katarina (25. nov.): "Sv. Katarina sneg belina." Na ta dan je sneg na Krasu pogost gost.'],
+  [12,  4, 'Sv. Barbara (4. dec.): "Sv. Barbara prinaša zimo na bara." Ker iz veje češnje odrezano vejico damo v vodo — če procveti do Božiča, bo dobra letina.'],
+  [12, 13, 'Sv. Lucija (13. dec.): "Sv. Lucija — noč je daljša od dneva." Blizu zimskega solsticija, ko je dan najkrajši.'],
+  [12, 21, 'Zimski solsticij — najkrajši dan leta. "Po sv. Tomažu (21. dec.) dan za kokošji korak." Dnevi se počasi začnejo daljšati.'],
+  [12, 25, '"Jasno na Božič — hladen januar." Anticiklon ob Božiču pogosto napoveduje mrzlo novo leto na Krasu.'],
+  [12, 31, '"Kakršno vreme zadnji dan leta, takšno bo vse naslednje leto." — Staro slovensko vremensko izročilo za silvestrov dan.'],
+];
+
+/**
+ * Vrne pregovor za današnji datum ali null.
+ */
+function todayProverb() {
+  const now = new Date();
+  const m = now.getMonth() + 1;
+  const d = now.getDate();
+  const found = DATE_PROVERBS.find(([pm, pd]) => pm === m && pd === d);
+  return found ? found[2] : null;
+}
+
+// ——— 3. Dinamična dejstva iz meritev ——————————————————————————————————
 
 /**
  * Vrne 0–2 dinamična dejstva glede na trenutne meritve.
@@ -165,15 +211,19 @@ function fmtTime(d) {
  * @returns {{ primary: string, secondary: string|null }}
  */
 export function getDayFacts(latest = null) {
-  // Rotirajoče trivia: 1 na dan (po dnevu leta)
   const now     = new Date();
   const dayOfYr = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86_400_000);
-  const primary = TRIVIA[dayOfYr % TRIVIA.length];
+
+  // Na pravi datum pokaži pregovor kot primarno
+  const proverb = todayProverb();
+  const trivia  = TRIVIA[dayOfYr % TRIVIA.length];
+  const primary = proverb ?? trivia;
 
   // Astronomsko ali dinamično dejstvo za sekundarno
-  const astro   = astronomicalFact();
-  const dynamic = dynamicFacts(latest);
-  const secondary = astro ?? dynamic[0] ?? null;
+  const astro    = astronomicalFact();
+  const dynamic  = dynamicFacts(latest);
+  // Če je danes pregovor, dodaj še trivia kot sekundarno
+  const secondary = proverb ? trivia : (astro ?? dynamic[0] ?? null);
 
   return { primary, secondary };
 }
