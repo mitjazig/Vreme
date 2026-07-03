@@ -1,6 +1,7 @@
 import { REFRESH_MS, APP_VERSION, YEAR_SHEETS } from './config.js';
 import { initWindRose } from './wind-rose.js';
 import { sunriseSunset, moonPhase } from './astro.js';
+import { moonDayType, getSowingCalendar } from './agro.js';
 import { getDayFacts } from './fun-facts.js';
 import { setupInstallUI } from './install-ui.js';
 import { initPwaUpdates } from './pwa-update.js';
@@ -151,7 +152,25 @@ function renderMetrics(latest, readings) {
   }
   const feelEl = $('#temp-feel');
   if (feelEl && feel) {
-    feelEl.textContent = feel.txt;
+    const temp = latest?.temp;
+    const hum  = latest?.humidity;
+    const windKmh = (latest?.windSpeed ?? 0) * 3.6;
+    let feelNum = temp;
+    if (temp != null) {
+      if (temp <= 10 && windKmh > 5) {
+        // Wind chill
+        feelNum = 13.12 + 0.6215 * temp - 11.37 * Math.pow(windKmh, 0.16) + 0.3965 * temp * Math.pow(windKmh, 0.16);
+      } else if (temp >= 27 && hum != null) {
+        // Heat index (že izračunan v feelsLikeLabel)
+        const h = hum / 100;
+        feelNum = -8.784695 + 1.61139411 * temp + 2.3385 * h - 0.14611605 * temp * h
+          - 0.012308094 * temp * temp - 0.016424828 * h * h
+          + 0.002211732 * temp * temp * h + 0.00072546 * temp * h * h
+          - 0.000003582 * temp * temp * h * h;
+      }
+    }
+    const numStr = feelNum != null ? ` · Občutek ${feelNum.toFixed(0)}°` : '';
+    feelEl.textContent = feel.txt + numStr;
     feelEl.className = `now-panel__feel ${feel.cls}`;
   }
 
@@ -469,6 +488,100 @@ async function renderDayHistory() {
     </div>`;
 }
 
+/** —— Lunarni kmetijski nasvet —— */
+function renderAgro() {
+  const el = document.getElementById('agro-content');
+  const descEl = document.getElementById('agro-head-desc');
+  if (!el) return;
+
+  const now  = new Date();
+  const moon = moonPhase(now);
+  const day  = moonDayType(now, moon);
+  const sow  = getSowingCalendar(now.getMonth() + 1);
+  const monthName = now.toLocaleDateString('sl-SI', { month: 'long' });
+
+  if (descEl) descEl.textContent = `${day.info.emoji} ${day.info.sl} · ${moon.emoji} ${moon.name}`;
+
+  el.innerHTML = `
+    <div class="agro-type" style="border-left:3px solid ${day.info.color}">
+      <span class="agro-type__badge" style="background:${day.info.color}20;color:${day.info.color}">${day.info.emoji} ${day.info.sl}</span>
+      <span class="agro-type__sign">${day.zodiac.emoji} Luna v ${day.zodiac.name}</span>
+      <p class="agro-type__tip">${day.info.tip}</p>
+      <p class="agro-phase">${day.phaseAdvice}</p>
+      ${day.woodTip
+        ? `<p class="agro-wood">🪵 Odličen čas za žaganje in cepljenje drv — les bo trši in se bo manj krivil.</p>`
+        : `<p class="agro-wood agro-wood--next">🪵 Žaganje drv: naslednji dober čas čez <strong>${day.woodNextDays} ${day.woodNextDays === 1 ? 'dan' : day.woodNextDays < 5 ? 'dni' : 'dni'}</strong> (zadnja četrtina lune)</p>`}
+    </div>
+    <div class="agro-sow">
+      <div class="agro-sow__head">Setveni nasvet — ${monthName}</div>
+      <div class="agro-sow__grid">
+        ${sow.map((s) => `
+          <div class="agro-sow__item">
+            <span class="agro-sow__icon">${s.icon}</span>
+            <div>
+              <span class="agro-sow__crop">${s.crop}</span>
+              <span class="agro-sow__action">${s.action}</span>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+/** —— Tekoči mesec povzetek —— */
+function renderMonthSummary(readings) {
+  const el = document.getElementById('month-summary');
+  if (!el) return;
+
+  const now = new Date();
+  const curMonth = now.getMonth();
+  const curYear  = now.getFullYear();
+
+  const monthReadings = readings.filter((r) => {
+    if (!r.time || r.temp == null) return false;
+    return r.time.getMonth() === curMonth && r.time.getFullYear() === curYear;
+  });
+
+  if (!monthReadings.length) { el.hidden = true; return; }
+
+  const temps = monthReadings.map((r) => r.temp).filter((t) => t != null);
+  const minT  = Math.min(...temps);
+  const maxT  = Math.max(...temps);
+  const avgT  = temps.reduce((s, t) => s + t, 0) / temps.length;
+
+  // Skupne padavine — zadnja vrednost precipTotal za vsak dan
+  const dayTotals = {};
+  monthReadings.forEach((r) => {
+    if (r.precipTotal == null) return;
+    const d = r.time.toDateString();
+    dayTotals[d] = r.precipTotal;
+  });
+  const totalRain = Object.values(dayTotals).reduce((s, v) => s + v, 0);
+
+  const monthName = now.toLocaleDateString('sl-SI', { month: 'long' });
+
+  el.hidden = false;
+  el.innerHTML = `
+    <div class="ms-head">${monthName} ${curYear}</div>
+    <div class="ms-grid">
+      <div class="ms-item">
+        <span class="ms-lbl">Min</span>
+        <span class="ms-val ms-val--cold">${minT.toFixed(1)}°</span>
+      </div>
+      <div class="ms-item">
+        <span class="ms-lbl">Povp.</span>
+        <span class="ms-val">${avgT.toFixed(1)}°</span>
+      </div>
+      <div class="ms-item">
+        <span class="ms-lbl">Max</span>
+        <span class="ms-val ms-val--hot">${maxT.toFixed(1)}°</span>
+      </div>
+      <div class="ms-item">
+        <span class="ms-lbl">Padavine</span>
+        <span class="ms-val ms-val--rain">${totalRain.toFixed(1)} mm</span>
+      </div>
+    </div>`;
+}
+
 function renderCharts(readings) {
   if (typeof Chart === 'undefined') {
     throw new Error('Chart.js ni naložen');
@@ -488,6 +601,8 @@ function renderAll(bundle, fromCache = false) {
 
   renderHero(latest, summary, readings);
   renderMetrics(latest, readings);
+  renderMonthSummary(readings);
+  renderAgro();
   renderBbqHome(latest);
   renderSunStrip();
   renderDayFact(latest);

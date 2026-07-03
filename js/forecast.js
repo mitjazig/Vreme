@@ -38,9 +38,9 @@ export async function fetchHourlyForecast() {
   const params = new URLSearchParams({
     latitude: LAT,
     longitude: LON,
-    hourly: ['temperature_2m', 'weather_code', 'precipitation', 'precipitation_probability'].join(','),
+    hourly: ['temperature_2m', 'apparent_temperature', 'weather_code', 'precipitation', 'precipitation_probability'].join(','),
     timezone: 'Europe/Ljubljana',
-    forecast_days: '3',
+    forecast_days: '5',
   });
 
   const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
@@ -59,9 +59,10 @@ export async function fetchHourlyForecast() {
       if (isNewDay) lastDate = dateKey;
       return {
         time,
-        temp: hourly.temperature_2m[i],
-        code: hourly.weather_code[i],
-        precip: hourly.precipitation[i] ?? 0,
+        temp:       hourly.temperature_2m[i],
+        feel:       hourly.apparent_temperature?.[i] ?? null,
+        code:       hourly.weather_code[i],
+        precip:     hourly.precipitation[i] ?? 0,
         precipProb: hourly.precipitation_probability[i],
         isNewDay,
       };
@@ -405,6 +406,8 @@ export async function fetchForecast() {
       'temperature_2m_min',
       'precipitation_sum',
       'precipitation_probability_max',
+      'sunrise',
+      'sunset',
     ].join(','),
     timezone: 'Europe/Ljubljana',
     forecast_days: '7',
@@ -416,11 +419,13 @@ export async function fetchForecast() {
 
   const { daily } = json;
   return daily.time.map((date, i) => ({
-    date: new Date(date),
-    code: daily.weather_code[i],
-    max: daily.temperature_2m_max[i],
-    min: daily.temperature_2m_min[i],
-    rain: daily.precipitation_sum[i],
+    date:     new Date(date),
+    code:     daily.weather_code[i],
+    max:      daily.temperature_2m_max[i],
+    min:      daily.temperature_2m_min[i],
+    rain:     daily.precipitation_sum[i],
     rainProb: daily.precipitation_probability_max[i],
+    sunrise:  daily.sunrise?.[i] ? new Date(daily.sunrise[i]) : null,
+    sunset:   daily.sunset?.[i]  ? new Date(daily.sunset[i])  : null,
   }));
 }
