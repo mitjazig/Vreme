@@ -16,6 +16,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/styles.css" />
+    <script>try{if(localStorage.getItem('vreme-contrast')==='high')document.documentElement.dataset.contrast='high'}catch(e){}</script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   </head>
   <body class="page-forecast">
@@ -27,6 +28,9 @@
         <h1 class="header__title">Napoved</h1>
       </div>
       <div class="header__actions">
+        <button type="button" class="btn btn--icon" data-contrast-toggle aria-pressed="false" title="Sončni kontrast" aria-label="Sončni kontrast">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </button>
         <button type="button" id="btn-reload" class="btn btn--icon" aria-label="Osveži">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M21 12a9 9 0 1 1-2.64-6.36" />
@@ -54,7 +58,7 @@
           </span>
           <div>
             <h2 class="card__title">Vremenski alarmi</h2>
-            <p class="card__desc">Koper · naslednjih 7 dni</p>
+            <p class="card__desc">Iz napovedi · naslednjih 16 dni</p>
           </div>
         </div>
         <div id="warn-list" class="warn-list">
@@ -62,19 +66,49 @@
         </div>
       </section>
 
-      <!-- 7-dnevna napoved -->
-      <section class="card forecast-card" aria-label="7-dnevna napoved">
+      <!-- 16-dnevna napoved -->
+      <section class="card forecast-card" aria-label="16-dnevna napoved">
         <div class="card__head">
           <span class="card__icon card__icon--warm" aria-hidden="true">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
           </span>
           <div>
-            <h2 class="card__title">7-dnevna napoved</h2>
+            <h2 class="card__title">16-dnevna napoved</h2>
             <p class="card__desc">Open-Meteo · Koper</p>
           </div>
         </div>
         <div id="forecast-days" class="forecast-scroll">
           <p class="forecast-loading">Nalagam napoved…</p>
+        </div>
+      </section>
+
+      <!-- Primerjava modelov -->
+      <section class="card" aria-label="Primerjava modelov">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(99,102,241,0.15);color:#818cf8" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/></svg>
+          </span>
+          <div>
+            <h2 class="card__title">Primerjava modelov</h2>
+            <p class="card__desc">ECMWF · ICON · GFS · 7 dni</p>
+          </div>
+        </div>
+        <div id="models-content" class="models-compare">
+          <p class="forecast-loading">Nalagam…</p>
+        </div>
+      </section>
+
+      <!-- Snežna meja -->
+      <section class="card" aria-label="Snežna meja">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(186,230,253,0.15);color:#7dd3fc" aria-hidden="true">❄️</span>
+          <div>
+            <h2 class="card__title">Snežna meja</h2>
+            <p class="card__desc">Višina 0 °C · Rakitovec</p>
+          </div>
+        </div>
+        <div id="freeze-content">
+          <p class="forecast-loading">Nalagam…</p>
         </div>
       </section>
 
@@ -182,7 +216,7 @@
           </span>
           <div>
             <h2 class="card__title">Požarna nevarnost</h2>
-            <p class="card__desc">FWI · Kras · 7-dnevna napoved</p>
+            <p class="card__desc">FWI + gasilski povzetek · 7 dni</p>
           </div>
         </div>
         <div id="fire-content" class="fire-content">

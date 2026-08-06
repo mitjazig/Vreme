@@ -1,5 +1,6 @@
 import { APP_VERSION } from './config.js';
 import { initPwaUpdates } from './pwa-update.js';
+import { initContrast } from './contrast.js';
 import { fetchDataBounds, fetchMonthReadings, fetchYearReadings } from './sheets.js';
 import {
   aggregateByDay,
@@ -265,6 +266,7 @@ async function init() {
 
   await clearStaleCaches();
   initPwaUpdates();
+  initContrast();
 
   $$('.view-toggle__btn').forEach((btn) => {
     btn.addEventListener('click', () => {

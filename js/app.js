@@ -5,8 +5,11 @@ import { moonDayType, getSowingCalendar } from './agro.js';
 import { getDayFacts } from './fun-facts.js';
 import { setupInstallUI } from './install-ui.js';
 import { initPwaUpdates } from './pwa-update.js';
+import { initContrast } from './contrast.js';
 import { loadWeatherBundle, fetchDayReadings } from './sheets.js';
 import { renderHourlyChart, renderDailyChart, renderPrecipChart24h } from './charts.js';
+import { calcBoraJugo } from './bora.js';
+import { fetchYesterdayModels } from './forecast.js';
 
 import {
   windLabel,
@@ -120,7 +123,7 @@ function lastRainLabel(readings) {
       return `pred ${diffD} ${diffD === 1 ? 'dnem' : diffD < 5 ? 'dnevi' : 'dnevi'}`;
     }
   }
-  return 'ni podatka';
+  return null; // ni zanesljivega zadnjega dežja v predpomnilniku
 }
 
 function renderMetrics(latest, readings) {
@@ -132,7 +135,9 @@ function renderMetrics(latest, readings) {
   const lastRain = lastRainLabel(readings);
   const rainValue = latest.precipTotal > 0
     ? formatNum(latest.precipTotal, ' mm', 1)
-    : lastRain ? `<span class="now-stat__sub">Zadnji: ${lastRain}</span>` : '0 mm';
+    : lastRain
+      ? `<span class="now-stat__sub">Zadnji: ${lastRain}</span>`
+      : '0 mm';
 
   const items = [
     { short: 'Vlaž.', value: formatNum(latest.humidity, '%', 0) },
@@ -186,16 +191,137 @@ function renderMetrics(latest, readings) {
 }
 
 function todayMinMax(readings) {
-  if (!readings?.length) return { min: null, max: null };
+  if (!readings?.length) return { min: null, max: null, avg: null };
   const todayKey = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Ljubljana' }).format(new Date());
   const todayReadings = readings.filter((r) => {
     if (!r.time || r.temp == null) return false;
     const k = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Ljubljana' }).format(r.time);
     return k === todayKey;
   });
-  if (!todayReadings.length) return { min: null, max: null };
+  if (!todayReadings.length) return { min: null, max: null, avg: null };
   const temps = todayReadings.map((r) => r.temp);
-  return { min: Math.min(...temps), max: Math.max(...temps) };
+  const min = Math.min(...temps);
+  const max = Math.max(...temps);
+  const avg = temps.reduce((s, t) => s + t, 0) / temps.length;
+  return { min, max, avg };
+}
+
+/** Klima za današnji koledarski dan (pretekla leta) – s predpomnilnikom */
+async function loadClimateForToday() {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const day = now.getDate();
+  const curYear = now.getFullYear();
+  const lsKey = `vreme-climate-v1-${month}-${day}`;
+
+  try {
+    const cached = JSON.parse(localStorage.getItem(lsKey) || 'null');
+    if (cached?.entries?.length && cached.year === curYear) return cached;
+  } catch { /* ignore */ }
+
+  const pastYears = Object.keys(YEAR_SHEETS)
+    .map(Number)
+    .filter((y) => y < curYear)
+    .sort((a, b) => b - a);
+
+  if (!pastYears.length) return { entries: [], year: curYear };
+
+  const results = await Promise.allSettled(
+    pastYears.map((y) => fetchDayReadings(y, month, day).then((r) => ({ year: y, readings: r }))),
+  );
+
+  const entries = results
+    .filter((r) => r.status === 'fulfilled' && r.value.readings.length)
+    .map((r) => {
+      const { year, readings } = r.value;
+      const temps = readings.map((x) => x.temp).filter((t) => t != null);
+      const precip = readings.length ? (readings[readings.length - 1].precipTotal ?? 0) : 0;
+      const windGusts = readings.map((x) => x.windGust).filter((g) => g != null);
+      const avg = temps.length ? temps.reduce((s, t) => s + t, 0) / temps.length : null;
+      return {
+        year,
+        min: temps.length ? Math.min(...temps) : null,
+        max: temps.length ? Math.max(...temps) : null,
+        avg,
+        rain: precip,
+        wind: windGusts.length ? Math.max(...windGusts) : null,
+      };
+    });
+
+  const payload = { entries, year: curYear, month, day };
+  try {
+    localStorage.setItem(lsKey, JSON.stringify(payload));
+  } catch { /* quota */ }
+  return payload;
+}
+
+function fmtDelta(d, unit = '°') {
+  if (d == null || Number.isNaN(d)) return '—';
+  const sign = d > 0 ? '+' : '';
+  return `${sign}${d.toFixed(1)}${unit}`;
+}
+
+async function renderAnomaly(readings) {
+  const el = document.getElementById('anomaly-content');
+  const card = document.getElementById('anomaly-card');
+  if (!el) return;
+
+  el.innerHTML = '<p class="forecast-loading">Nalagam…</p>';
+  const today = todayMinMax(readings);
+  const climate = await loadClimateForToday();
+  const entries = climate.entries ?? [];
+
+  if (!entries.length || today.max == null) {
+    if (card) card.hidden = true;
+    return;
+  }
+  if (card) card.hidden = false;
+
+  const maxs = entries.map((e) => e.max).filter((v) => v != null);
+  const mins = entries.map((e) => e.min).filter((v) => v != null);
+  const avgs = entries.map((e) => e.avg).filter((v) => v != null);
+  const rains = entries.map((e) => e.rain).filter((v) => v != null);
+
+  const climMax = maxs.reduce((s, v) => s + v, 0) / maxs.length;
+  const climMin = mins.reduce((s, v) => s + v, 0) / mins.length;
+  const climAvg = avgs.length ? avgs.reduce((s, v) => s + v, 0) / avgs.length : null;
+  const climRain = rains.length ? rains.reduce((s, v) => s + v, 0) / rains.length : 0;
+
+  const dMax = today.max - climMax;
+  const dMin = today.min != null ? today.min - climMin : null;
+  const dAvg = today.avg != null && climAvg != null ? today.avg - climAvg : null;
+
+  const yearsN = entries.length;
+  const dateLabel = new Date().toLocaleDateString('sl-SI', { day: 'numeric', month: 'long' });
+
+  const deltaCls = (d) => {
+    if (d == null) return '';
+    if (Math.abs(d) < 1) return 'anom--flat';
+    return d > 0 ? 'anom--hot' : 'anom--cold';
+  };
+
+  el.innerHTML = `
+    <div class="anom-grid">
+      <div class="anom-item">
+        <span class="anom-item__lbl">Max danes</span>
+        <span class="anom-item__now">${today.max.toFixed(1)}°</span>
+        <span class="anom-item__clim">povp. ${climMax.toFixed(1)}°</span>
+        <span class="anom-item__delta ${deltaCls(dMax)}">${fmtDelta(dMax)}</span>
+      </div>
+      <div class="anom-item">
+        <span class="anom-item__lbl">Min danes</span>
+        <span class="anom-item__now">${today.min != null ? today.min.toFixed(1) + '°' : '—'}</span>
+        <span class="anom-item__clim">povp. ${climMin.toFixed(1)}°</span>
+        <span class="anom-item__delta ${deltaCls(dMin)}">${fmtDelta(dMin)}</span>
+      </div>
+      <div class="anom-item">
+        <span class="anom-item__lbl">Povp. T</span>
+        <span class="anom-item__now">${today.avg != null ? today.avg.toFixed(1) + '°' : '—'}</span>
+        <span class="anom-item__clim">povp. ${climAvg != null ? climAvg.toFixed(1) + '°' : '—'}</span>
+        <span class="anom-item__delta ${deltaCls(dAvg)}">${fmtDelta(dAvg)}</span>
+      </div>
+    </div>
+    <p class="tide-note">${dateLabel} · odstop od povprečja ${yearsN} ${yearsN === 1 ? 'leta' : yearsN < 5 ? 'let' : 'let'} · padavine klima ~${climRain.toFixed(1)} mm</p>`;
 }
 
 /** —— Meteoalarm opozorila —— */
@@ -283,6 +409,121 @@ function renderBbqHome(latest) {
       </div>
     </div>
     ${warnings.length ? `<div class="bbq-warnings">${warnings.map(w => `<span class="bbq-warning">${w}</span>`).join('')}</div>` : ''}`;
+}
+
+/** Hitri pregled – kompaktni čipi */
+function renderGlance(latest, readings) {
+  const el = $('#glance');
+  if (!el || !latest) return;
+  const h24 = last24h(readings);
+  let rain24 = 0;
+  for (let i = 1; i < h24.length; i++) {
+    const prev = h24[i - 1]?.precipTotal;
+    const cur = h24[i]?.precipTotal;
+    if (prev != null && cur != null && cur >= prev) rain24 += cur - prev;
+  }
+  const bora = calcBoraJugo(latest);
+  const gustKmh = latest.windGust != null ? Math.round(latest.windGust * 3.6) : null;
+  const windTag = bora?.type === 'burja' ? 'Burja' : bora?.type === 'jugo' ? 'Jugo' : bora?.type === 'mirno' ? 'Mirno' : 'Veter';
+
+  el.hidden = false;
+  el.innerHTML = `
+    <div class="glance__chip"><span class="glance__k">T</span><span class="glance__v">${latest.temp != null ? `${latest.temp.toFixed(1)}°` : '—'}</span></div>
+    <div class="glance__chip"><span class="glance__k">Sunki</span><span class="glance__v">${gustKmh != null ? `${gustKmh} km/h` : '—'}</span></div>
+    <div class="glance__chip"><span class="glance__k">24h dež</span><span class="glance__v">${rain24 > 0.05 ? `${rain24.toFixed(1)} mm` : '0'}</span></div>
+    <div class="glance__chip glance__chip--accent"><span class="glance__k">${bora?.emoji ?? '💨'}</span><span class="glance__v">${windTag}</span></div>`;
+}
+
+function renderBora(latest) {
+  const el = $('#bora-content');
+  if (!el) return;
+  const b = calcBoraJugo(latest);
+  if (!b) {
+    el.innerHTML = '<p class="forecast-loading">Ni podatkov o vetru.</p>';
+    return;
+  }
+  const gustKmh = Math.round(b.gustMs * 3.6);
+  const dirStr = b.dir != null ? windLabel(b.dir) : '—';
+  el.innerHTML = `
+    <div class="bora-hero ${b.cls}">
+      <span class="bora-hero__emoji">${b.emoji}</span>
+      <div class="bora-hero__body">
+        <span class="bora-hero__title">${b.title}</span>
+        <span class="bora-hero__meta">${dirStr} · sunki ${gustKmh} km/h</span>
+        <span class="bora-hero__tip">${b.tip}</span>
+      </div>
+      <div class="bora-meter" aria-hidden="true">
+        ${[1, 2, 3, 4, 5].map((i) => `<span class="bora-meter__seg ${i <= b.score ? 'is-on' : ''}"></span>`).join('')}
+      </div>
+    </div>`;
+}
+
+function stationYesterdayStats(readings) {
+  if (!readings?.length) return null;
+  const fmt = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Ljubljana' });
+  const y = new Date();
+  y.setDate(y.getDate() - 1);
+  const yKey = fmt.format(y);
+  const dayReadings = readings.filter((r) => r.time && fmt.format(r.time) === yKey);
+  if (dayReadings.length < 4) return { dateKey: yKey, thin: true };
+
+  const temps = dayReadings.map((r) => r.temp).filter((t) => t != null);
+  const max = temps.length ? Math.max(...temps) : null;
+  const min = temps.length ? Math.min(...temps) : null;
+  let rain = 0;
+  const sorted = [...dayReadings].sort((a, b) => a.time - b.time);
+  for (let i = 1; i < sorted.length; i++) {
+    const a = sorted[i - 1].precipTotal;
+    const b = sorted[i].precipTotal;
+    if (a != null && b != null && b >= a) rain += b - a;
+  }
+  return { dateKey: yKey, max, min, rain, thin: false };
+}
+
+async function renderSkill(readings) {
+  const el = $('#skill-content');
+  if (!el) return;
+  let obs = stationYesterdayStats(readings);
+
+  if (!obs || obs.thin || obs.max == null) {
+    try {
+      const y = new Date();
+      y.setDate(y.getDate() - 1);
+      const dayRows = await fetchDayReadings(y.getFullYear(), y.getMonth() + 1, y.getDate());
+      obs = stationYesterdayStats(dayRows);
+    } catch { /* ignore */ }
+  }
+
+  if (!obs || obs.thin || obs.max == null) {
+    el.innerHTML = '<p class="forecast-loading">Za primerjavo potrebujem več meritev včeraj.</p>';
+    return;
+  }
+  try {
+    const { models } = await fetchYesterdayModels(obs.dateKey);
+    const rows = Object.values(models).map((m) => {
+      const dMax = m.max != null && obs.max != null ? m.max - obs.max : null;
+      const dMin = m.min != null && obs.min != null ? m.min - obs.min : null;
+      const fmtD = (d) => (d == null ? '—' : `${d >= 0 ? '+' : ''}${d.toFixed(1)}°`);
+      return `<div class="skill-row">
+        <span class="skill-row__model">${m.short}</span>
+        <span class="skill-row__val">${m.max != null ? `${Math.round(m.max)}°` : '—'}</span>
+        <span class="skill-row__delta ${dMax != null && Math.abs(dMax) >= 2 ? 'is-off' : ''}">${fmtD(dMax)}</span>
+        <span class="skill-row__val">${m.min != null ? `${Math.round(m.min)}°` : '—'}</span>
+        <span class="skill-row__delta ${dMin != null && Math.abs(dMin) >= 2 ? 'is-off' : ''}">${fmtD(dMin)}</span>
+      </div>`;
+    }).join('');
+    el.innerHTML = `
+      <div class="skill-obs">
+        <span>Postaja včeraj</span>
+        <strong>${obs.max.toFixed(1)}°</strong> / <strong>${obs.min != null ? `${obs.min.toFixed(1)}°` : '—'}</strong>
+        <span class="skill-obs__rain">${obs.rain > 0.1 ? `${obs.rain.toFixed(1)} mm` : 'brez dežja'}</span>
+      </div>
+      <div class="skill-head"><span></span><span>Max</span><span>±</span><span>Min</span><span>±</span></div>
+      ${rows}
+      <p class="tide-note">Odstop = napoved − postaja · ${obs.dateKey}</p>`;
+  } catch (err) {
+    el.innerHTML = `<p class="forecast-loading">Primerjava ni na voljo (${err.message}).</p>`;
+  }
 }
 
 /** —— Zanimivost dneva —— */
@@ -406,49 +647,18 @@ async function renderDayHistory() {
   const el = document.getElementById('day-history');
   if (!el) return;
 
-  const now    = new Date();
-  const month  = now.getMonth() + 1;
-  const day    = now.getDate();
-  const curYear = now.getFullYear();
-
-  // Pretekla leta ki imajo podatke
-  const pastYears = Object.keys(YEAR_SHEETS)
-    .map(Number)
-    .filter((y) => y < curYear)
-    .sort((a, b) => b - a); // od najnovejšega
-
-  if (!pastYears.length) { el.hidden = true; return; }
-
-  // Vzporedno fetch vseh let
+  const now = new Date();
   el.hidden = false;
   el.innerHTML = `<div class="dh-loading">Nalagam zgodovino…</div>`;
 
-  const results = await Promise.allSettled(
-    pastYears.map((y) => fetchDayReadings(y, month, day).then((r) => ({ year: y, readings: r })))
-  );
-
-  const entries = results
-    .filter((r) => r.status === 'fulfilled' && r.value.readings.length)
-    .map((r) => {
-      const { year, readings } = r.value;
-      const temps = readings.map((x) => x.temp).filter((t) => t != null);
-      const precip = readings.length ? (readings[readings.length - 1].precipTotal ?? 0) : 0;
-      const windGusts = readings.map((x) => x.windGust).filter((g) => g != null);
-      return {
-        year,
-        min:  temps.length ? Math.min(...temps) : null,
-        max:  temps.length ? Math.max(...temps) : null,
-        rain: precip,
-        wind: windGusts.length ? Math.max(...windGusts) : null,
-      };
-    });
-
+  const climate = await loadClimateForToday();
+  const entries = climate.entries ?? [];
   if (!entries.length) { el.hidden = true; return; }
 
-  // Rekordni vrednosti čez vsa ta leta
   const recMax  = Math.max(...entries.filter((e) => e.max  != null).map((e) => e.max));
   const recMin  = Math.min(...entries.filter((e) => e.min  != null).map((e) => e.min));
-  const recRain = Math.max(...entries.filter((e) => e.rain  > 0).map((e) => e.rain));
+  const rainEntries = entries.filter((e) => e.rain > 0);
+  const recRain = rainEntries.length ? Math.max(...rainEntries.map((e) => e.rain)) : null;
 
   const dateLabel = now.toLocaleDateString('sl-SI', { day: 'numeric', month: 'long' });
 
@@ -462,7 +672,7 @@ async function renderDayHistory() {
       ${entries.map((e) => {
         const isHotRec  = e.max  != null && e.max  === recMax;
         const isColdRec = e.min  != null && e.min  === recMin;
-        const isRainRec = e.rain > 0      && e.rain === recRain;
+        const isRainRec = recRain != null && e.rain > 0 && e.rain === recRain;
         const hasRain   = e.rain > 0.1;
 
         return `<div class="dh-card">
@@ -600,12 +810,16 @@ function renderAll(bundle, fromCache = false) {
   const { readings, latest, summary, fetchedAt } = bundle;
 
   renderHero(latest, summary, readings);
+  renderGlance(latest, readings);
   renderMetrics(latest, readings);
   renderMonthSummary(readings);
   renderAgro();
+  renderBora(latest);
   renderBbqHome(latest);
+  renderSkill(readings);
   renderSunStrip();
   renderDayFact(latest);
+  renderAnomaly(readings);
 
   let chartError = null;
   try {
@@ -713,6 +927,7 @@ async function init() {
 
   await clearStaleCaches();
   initPwaUpdates();
+  initContrast();
   setupInstallUI();
   initWindRose();
   $('#btn-refresh')?.addEventListener('click', refresh);

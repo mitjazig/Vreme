@@ -1,4 +1,6 @@
 import { fetchLocationForecast, reverseGeocode, wmoIcon, wmoLabel } from './forecast.js';
+import { initContrast } from './contrast.js';
+import { initPwaUpdates } from './pwa-update.js';
 
 const $ = (id) => document.getElementById(id);
 const STORAGE_KEY = 'lokacija_last';
@@ -130,7 +132,7 @@ function renderBbq(c, today) {
     ${warnings.length ? `<div class="bbq-warnings">${warnings.map(w => `<span class="bbq-warning">${w}</span>`).join('')}</div>` : ''}`;
 }
 
-/** 7-dnevna napoved */
+/** 16-dnevna napoved */
 function renderDaily(days) {
   const el = $('loc-daily');
   if (!el) return;
@@ -279,7 +281,7 @@ function renderSnow(daily, hourly) {
           <span class="snow-day__val">❄️ ${d.snow.toFixed(1)} cm</span>
         </div>`;
       }).join('')}
-    </div>` : `<p class="snow-none">Ni pričakovanega snega v 7 dneh.</p>`}
+    </div>` : `<p class="snow-none">Ni pričakovanega snega v 16 dneh.</p>`}
     <p class="tide-note">Meja sneženja = nadmorska višina 0°C · ICON-D2</p>`;
 }
 
@@ -386,6 +388,9 @@ async function geolocate() {
 }
 
 function init() {
+  initPwaUpdates();
+  initContrast();
+
   // Gumb za geolokacijo
   $('btn-geolocate')?.addEventListener('click', geolocate);
 

@@ -20,6 +20,9 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/styles.css" />
+    <script>
+      try { if (localStorage.getItem('vreme-contrast') === 'high') document.documentElement.dataset.contrast = 'high'; } catch (e) {}
+    </script>
     <script src="vendor/chart.umd.min.js"></script>
   </head>
   <body>
@@ -34,6 +37,11 @@
         <button type="button" id="btn-install" class="btn btn--ghost hidden" aria-label="Namesti aplikacijo">
           Namesti
         </button>
+        <button type="button" class="btn btn--icon" data-contrast-toggle aria-pressed="false" title="Sončni kontrast" aria-label="Sončni kontrast">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          </svg>
+        </button>
         <button type="button" id="btn-refresh" class="btn btn--icon" aria-label="Osveži podatke">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M21 12a9 9 0 1 1-2.64-6.36" />
@@ -44,6 +52,8 @@
     </header>
 
     <p id="status" class="status" role="status">Nalagam podatke…</p>
+
+    <div id="glance" class="glance" hidden aria-label="Hitri pregled"></div>
 
     <main class="main">
       <section class="card now-panel" aria-label="Trenutno vreme">
@@ -82,6 +92,20 @@
       <!-- Ta dan v preteklosti -->
       <div id="day-history" class="day-history" hidden aria-label="Ta dan v preteklosti"></div>
 
+      <!-- Anomalije -->
+      <section id="anomaly-card" class="card" hidden aria-label="Anomalije">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(244,63,94,0.12);color:#f43f5e" aria-hidden="true">📈</span>
+          <div>
+            <h2 class="card__title">Anomalije</h2>
+            <p class="card__desc">Danes vs večletno povprečje</p>
+          </div>
+        </div>
+        <div id="anomaly-content" class="anomaly-content">
+          <p class="forecast-loading">Nalagam…</p>
+        </div>
+      </section>
+
       <!-- Tekoči mesec povzetek -->
       <div id="month-summary" class="card month-summary" hidden aria-label="Mesečni povzetek"></div>
 
@@ -97,6 +121,20 @@
         <div id="agro-content"></div>
       </section>
 
+      <!-- Burja / jugo -->
+      <section class="card" aria-label="Burja in jugo">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(56,189,248,0.15);color:#38bdf8" aria-hidden="true">🌬️</span>
+          <div>
+            <h2 class="card__title">Burja / jugo</h2>
+            <p class="card__desc">Obala · iz postaje</p>
+          </div>
+        </div>
+        <div id="bora-content" class="bora-content">
+          <p class="forecast-loading">Nalagam…</p>
+        </div>
+      </section>
+
       <!-- BBQ indeks -->
       <section class="card bbq-home-card" aria-label="BBQ indeks">
         <div class="card__head">
@@ -107,6 +145,20 @@
           </div>
         </div>
         <div id="bbq-home-content" class="bbq-content">
+          <p class="forecast-loading">Nalagam…</p>
+        </div>
+      </section>
+
+      <!-- Postaja vs napoved -->
+      <section class="card" aria-label="Postaja proti napovedi">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(99,102,241,0.15);color:#818cf8" aria-hidden="true">📊</span>
+          <div>
+            <h2 class="card__title">Postaja vs napoved</h2>
+            <p class="card__desc">Včeraj · ECMWF · ICON · GFS</p>
+          </div>
+        </div>
+        <div id="skill-content" class="skill-content">
           <p class="forecast-loading">Nalagam…</p>
         </div>
       </section>

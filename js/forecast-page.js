@@ -1,5 +1,6 @@
 import { initPwaUpdates } from './pwa-update.js';
-import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides, fetchFireDanger, fetchLocationForecast, reverseGeocode, fetchWarnings, fetchWindyWaves, fetchWindForecast } from './forecast.js';
+import { initContrast } from './contrast.js';
+import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides, fetchFireDanger, fetchLocationForecast, reverseGeocode, fetchWarnings, fetchWindyWaves, fetchWindForecast, fetchModelComparison, fetchFreezingLevel } from './forecast.js';
 import { moonPhase, STATION_LAT, STATION_LON } from './astro.js';
 import { LightningTracker } from './lightning.js';
 import { initNotifications, notifyWarnings } from './notifications.js';
@@ -21,7 +22,7 @@ function renderForecast(days) {
 
   const DAY_SL = ['ned', 'pon', 'tor', 'sre', 'čet', 'pet', 'sob'];
   el.innerHTML = days.map((d, i) => {
-    const label = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : DAY_SL[d.date.getDay()];
+    const label = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : `${DAY_SL[d.date.getDay()]} ${d.date.getDate()}.`;
     const hasRain = d.rain != null && d.rain > 0.1;
     const rainProb = d.rainProb != null ? `${d.rainProb}%` : '';
     return `<div class="forecast-day">
@@ -36,6 +37,42 @@ function renderForecast(days) {
         : `<span class="forecast-day__rain forecast-day__rain--none">·</span>`}
     </div>`;
   }).join('');
+}
+
+/** —— Primerjava ECMWF / ICON / GFS —— */
+function renderModelComparison(data, error) {
+  const el = document.getElementById('models-content');
+  if (!el) return;
+  if (!data?.days?.length) {
+    el.innerHTML = `<p class="forecast-loading">Primerjava modelov ni na voljo.${error?.message ? ` (${error.message})` : ''}</p>`;
+    return;
+  }
+
+  const DAY_SL = ['ned', 'pon', 'tor', 'sre', 'čet', 'pet', 'sob'];
+  const { days, models } = data;
+
+  const header = `<div class="model-row model-row--head">
+    <span class="model-row__day">Dan</span>
+    ${models.map((m) => `<span class="model-row__col" title="${m.name}">${m.short}</span>`).join('')}
+  </div>`;
+
+  const rows = days.map((d, i) => {
+    const label = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : `${DAY_SL[d.date.getDay()]} ${d.date.getDate()}.`;
+    const cells = models.map((m) => {
+      const v = d.models[m.id];
+      if (!v) return `<span class="model-row__col model-row__col--empty">—</span>`;
+      const rain = (v.rain ?? 0) > 0.1 ? `<span class="model-cell__rain">${v.rain.toFixed(0)} mm</span>` : '';
+      return `<span class="model-row__col">
+        <span class="model-cell__icon" title="${wmoLabel(v.code)}">${wmoIcon(v.code)}</span>
+        <span class="model-cell__temps"><b>${v.max != null ? Math.round(v.max) + '°' : '—'}</b><span>${v.min != null ? Math.round(v.min) + '°' : ''}</span></span>
+        ${rain}
+      </span>`;
+    }).join('');
+    return `<div class="model-row"><span class="model-row__day">${label}</span>${cells}</div>`;
+  }).join('');
+
+  el.innerHTML = `${header}${rows}
+    <p class="tide-note">Open-Meteo · ECMWF IFS · DWD ICON · NOAA GFS · WRF ni javno dostopen v brskalniku</p>`;
 }
 
 function renderHourly(hours) {
@@ -265,17 +302,66 @@ function fwiInfo(fwi) {
   return              { label: 'Ekstremna',        cls: 'fwi--extreme',  bar: Math.min(80 + (fwi - 38) / 20 * 20, 100) };
 }
 
-function renderFireDanger(days) {
+/** Gasilski povzetek iz ISI (širjenje) + FWI/BUI (težavnost) + veter/RH */
+function fireBrief(day) {
+  if (!day || day.fwi == null) return null;
+  const isi = day.isi ?? 0;
+  const fwi = day.fwi ?? 0;
+  const wind = day.wind ?? 0;
+  const rh = day.rh ?? 50;
+
+  let spread;
+  if (isi < 2)       spread = { label: 'Počasno širjenje',  cls: 'fwi-brief--ok' };
+  else if (isi < 5)  spread = { label: 'Zmerno širjenje',   cls: 'fwi-brief--warn' };
+  else if (isi < 10) spread = { label: 'Hitro širjenje',    cls: 'fwi-brief--hot' };
+  else               spread = { label: 'Zelo hitro širjenje', cls: 'fwi-brief--ext' };
+
+  let control;
+  if (fwi < 11.2)     control = { label: 'Lažje gašenje',     cls: 'fwi-brief--ok' };
+  else if (fwi < 21.3) control = { label: 'Zahtevnejše gašenje', cls: 'fwi-brief--warn' };
+  else if (fwi < 38)  control = { label: 'Težko gašenje',     cls: 'fwi-brief--hot' };
+  else                control = { label: 'Zelo težko gašenje', cls: 'fwi-brief--ext' };
+
+  const notes = [];
+  if (wind >= 25 && rh <= 35) {
+    notes.push('Kras: močan veter + nizka vlažnost — hitro sušenje goriva');
+  } else if (wind >= 40) {
+    notes.push('Močni sunki — nevarnost preskokov in hitrega širjenja');
+  } else if (rh <= 30) {
+    notes.push('Zelo suha zračna vlaga — drobno gorivo hitro vnetljivo');
+  }
+  if ((day.dc ?? 0) >= 300) notes.push('Visok DC — globlja suša, težje gasiti tleče žarišče');
+  if ((day.ffmc ?? 0) >= 90) notes.push('Visok FFMC — površinsko gorivo zelo suho');
+
+  return { spread, control, notes, isi, wind, rh };
+}
+
+function renderFireDanger(days, error) {
   const el = document.getElementById('fire-content');
   if (!el) return;
-  if (!days?.length || days.every(d => d.fwi == null)) {
-    el.innerHTML = '<p class="forecast-loading">Podatki o požarni nevarnosti niso na voljo.</p>';
+  const errMsg = error?.message ? ` (${error.message})` : '';
+  if (!days?.length) {
+    el.innerHTML = `<p class="forecast-loading">Podatki o požarni nevarnosti niso na voljo.${errMsg}</p>`;
+    return;
+  }
+
+  if (days.every((d) => d.fwi == null)) {
+    el.innerHTML = `<p class="forecast-loading">Izračun FWI ni uspel.${errMsg}</p>`;
     return;
   }
 
   const DAY_SL = ['ned', 'pon', 'tor', 'sre', 'čet', 'pet', 'sob'];
   const today = days[0];
   const info = fwiInfo(today.fwi);
+  const brief = fireBrief(today);
+
+  const comps = [
+    { key: 'FFMC', val: today.ffmc, tip: 'Drobno gorivo' },
+    { key: 'DMC',  val: today.dmc,  tip: 'Srednje gorivo' },
+    { key: 'DC',   val: today.dc,   tip: 'Grobo / suša' },
+    { key: 'ISI',  val: today.isi,  tip: 'Začetno širjenje' },
+    { key: 'BUI',  val: today.bui,  tip: 'Razpoložljivo gorivo' },
+  ];
 
   el.innerHTML = `
     <div class="fwi-hero ${info.cls}">
@@ -297,6 +383,23 @@ function renderFireDanger(days) {
         </div>
       </div>
     </div>
+    ${brief ? `
+    <div class="fwi-brief">
+      <div class="fwi-brief__row">
+        <span class="fwi-brief__pill ${brief.spread.cls}">🔥 ${brief.spread.label}</span>
+        <span class="fwi-brief__pill ${brief.control.cls}">🧯 ${brief.control.label}</span>
+      </div>
+      <p class="fwi-brief__meta">ISI ${brief.isi?.toFixed?.(1) ?? '—'} · veter ${brief.wind != null ? Math.round(brief.wind) + ' km/h' : '—'} · RH ${brief.rh != null ? Math.round(brief.rh) + '%' : '—'} · poldne</p>
+      ${brief.notes.length ? `<ul class="fwi-brief__notes">${brief.notes.map((n) => `<li>${n}</li>`).join('')}</ul>` : ''}
+    </div>` : ''}
+    <div class="fwi-comps">
+      ${comps.map((c) => `
+        <div class="fwi-comp" title="${c.tip}">
+          <span class="fwi-comp__k">${c.key}</span>
+          <span class="fwi-comp__v">${c.val != null ? (c.val >= 100 ? c.val.toFixed(0) : c.val.toFixed(1)) : '—'}</span>
+          <span class="fwi-comp__t">${c.tip}</span>
+        </div>`).join('')}
+    </div>
     <div class="fwi-week">
       ${days.map((d, i) => {
         const inf = fwiInfo(d.fwi);
@@ -308,7 +411,7 @@ function renderFireDanger(days) {
         </div>`;
       }).join('')}
     </div>
-    <p class="tide-note">FWI (Canadian Fire Weather Index) · Open-Meteo · višja vrednost = večja nevarnost</p>`;
+    <p class="tide-note">Canadian FWI · lokalni izračun (Open-Meteo) · Rakitovec</p>`;
 }
 
 /** —— Napoved za mojo lokacijo —— */
@@ -332,7 +435,7 @@ function renderLocationForecast(data, locationName, lat, lon) {
     </div>
     <div class="loc-days">
       ${daily.map((d, i) => {
-        const lbl = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : DAY_SL[d.date.getDay()];
+        const lbl = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : `${DAY_SL[d.date.getDay()]} ${d.date.getDate()}.`;
         const hasRain = d.rain != null && d.rain > 0.1;
         return `<div class="loc-day">
           <span class="loc-day__lbl">${lbl}</span>
@@ -480,7 +583,7 @@ function renderSunriseDays(days) {
   const DAY_SL = ['ned', 'pon', 'tor', 'sre', 'čet', 'pet', 'sob'];
   el.innerHTML = days.map((d, i) => {
     if (!d.sunrise || !d.sunset) return '';
-    const label = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : DAY_SL[d.date.getDay()];
+    const label = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : `${DAY_SL[d.date.getDay()]} ${d.date.getDate()}.`;
     const diffMs = d.sunset - d.sunrise;
     const h = Math.floor(diffMs / 3_600_000);
     const m = Math.floor((diffMs % 3_600_000) / 60_000);
@@ -803,12 +906,48 @@ function initLightningMap() {
   setInterval(() => lightningTracker?.refreshColors(), 60_000);
 }
 
+function renderFreeze(data, error) {
+  const el = document.getElementById('freeze-content');
+  if (!el) return;
+  if (!data?.current) {
+    el.innerHTML = `<p class="forecast-loading">Snežna meja ni na voljo.${error?.message ? ` (${error.message})` : ''}</p>`;
+    return;
+  }
+  const h = data.current.height;
+  const elev = data.stationElev ?? 338;
+  const above = h != null ? Math.max(0, Math.round(h - elev)) : null;
+  const risk = h != null && h <= elev + 200
+    ? (h <= elev ? 'Zmrzal pri tleh / sneg možen' : 'Snežna meja blizu postaje')
+    : 'Visoko nad postajo';
+  const DAY_SL = ['ned', 'pon', 'tor', 'sre', 'čet', 'pet', 'sob'];
+
+  el.innerHTML = `
+    <div class="freeze-hero">
+      <div class="freeze-hero__val">${h != null ? `${Math.round(h)} m` : '—'}</div>
+      <div class="freeze-hero__body">
+        <span class="freeze-hero__lbl">Snežna meja (0 °C)</span>
+        <span class="freeze-hero__meta">${above != null ? `~${above} m nad Rakitovcem (${elev} m)` : ''}</span>
+        <span class="freeze-hero__risk">${risk}</span>
+      </div>
+    </div>
+    <div class="freeze-days">
+      ${(data.daily ?? []).map((d, i) => {
+        const lbl = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : `${DAY_SL[d.date.getDay()]} ${d.date.getDate()}.`;
+        return `<div class="freeze-day">
+          <span class="freeze-day__lbl">${lbl}</span>
+          <span class="freeze-day__val">${d.height != null ? `${Math.round(d.height)} m` : '—'}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <p class="tide-note">Open-Meteo · freezinglevel · poldne</p>`;
+}
+
 function renderWarnings(warnings) {
   const el = document.getElementById('warn-list');
   const card = document.getElementById('warn-card');
   if (!el) return;
   if (!warnings?.length) {
-    el.innerHTML = '<p class="warn-none">✅ Ni opozoril za naslednjih 7 dni.</p>';
+    el.innerHTML = '<p class="warn-none">✅ Ni opozoril za naslednjih 16 dni.</p>';
     return;
   }
   const LEVEL_COLOR = { yellow: '#fbbf24', orange: '#f97316', red: '#f43f5e' };
@@ -827,7 +966,7 @@ function renderWarnings(warnings) {
 async function load() {
   setStatus('Nalagam napoved…');
   try {
-    const [forecast, hourly, sea, aq, fire, warnings, waves, windFc] = await Promise.allSettled([
+    const [forecast, hourly, sea, aq, fire, warnings, waves, windFc, models, freeze] = await Promise.allSettled([
       fetchForecast(),
       fetchHourlyForecast(),
       fetchSeaTemp(),
@@ -836,6 +975,8 @@ async function load() {
       fetchWarnings(),
       fetchWindyWaves(),
       fetchWindForecast(),
+      fetchModelComparison(),
+      fetchFreezingLevel(),
     ]);
 
     if (forecast.status === 'fulfilled') renderForecast(forecast.value);
@@ -851,18 +992,24 @@ async function load() {
     else renderAirQuality(null);
 
     if (fire.status === 'fulfilled') renderFireDanger(fire.value);
-    else renderFireDanger(null);
+    else renderFireDanger(null, fire.reason);
 
     if (warnings.status === 'fulfilled') {
       renderWarnings(warnings.value);
       notifyWarnings(warnings.value);
     } else renderWarnings([]);
 
+    if (freeze.status === 'fulfilled') renderFreeze(freeze.value);
+    else renderFreeze(null, freeze.reason);
+
     if (waves.status === 'fulfilled') renderWaves(waves.value);
     else renderWaves(null);
 
     if (windFc.status === 'fulfilled') renderWindChart(windFc.value);
     else renderWindChart([]);
+
+    if (models.status === 'fulfilled') renderModelComparison(models.value);
+    else renderModelComparison(null, models.reason);
 
     if (hourly.status === 'fulfilled') renderTempChart(hourly.value);
     if (forecast.status === 'fulfilled') renderSunriseDays(forecast.value);
@@ -921,6 +1068,7 @@ function initSatellite() {
 
 async function init() {
   initPwaUpdates();
+  initContrast();
   initNotifications();
   $('#btn-reload')?.addEventListener('click', load);
 

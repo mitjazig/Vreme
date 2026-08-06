@@ -8,6 +8,7 @@
 
 import { APP_VERSION, YEAR_SHEETS } from './config.js';
 import { initPwaUpdates } from './pwa-update.js';
+import { initContrast } from './contrast.js';
 import { fetchYearReadings } from './sheets.js';
 import { aggregateByDay } from './weather-ui.js';
 
@@ -577,6 +578,7 @@ async function init() {
   }
 
   initPwaUpdates();
+  initContrast();
   $('#btn-reload')?.addEventListener('click', loadAndRender);
   await loadAndRender();
 }
