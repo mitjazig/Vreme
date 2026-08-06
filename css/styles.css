@@ -21,6 +21,38 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Sončni / visok kontrast – berljivost na soncu */
+html[data-contrast="high"] {
+  --bg: #e8eef4;
+  --bg-elevated: #ffffff;
+  --card: #ffffff;
+  --card-hover: #f8fafc;
+  --card-border: rgba(15, 23, 42, 0.14);
+  --card-highlight: rgba(15, 23, 42, 0.04);
+  --text: #0f172a;
+  --text-secondary: #1e293b;
+  --muted: #334155;
+  --accent: #0369a1;
+  --accent-dim: rgba(3, 105, 161, 0.14);
+  --warm: #b45309;
+  --warm-glow: rgba(180, 83, 9, 0.18);
+  --cold: #0369a1;
+  --hot: #be123c;
+  --rain: #047857;
+  --shadow: 0 4px 18px rgba(15, 23, 42, 0.1), 0 1px 0 var(--card-highlight) inset;
+}
+html[data-contrast="high"] .bg-gradient {
+  opacity: 0.25;
+  filter: saturate(0.6);
+}
+html[data-contrast="high"] .bottom-nav {
+  background: rgba(255, 255, 255, 0.92);
+  border-top-color: rgba(15, 23, 42, 0.1);
+}
+html[data-contrast="high"] body {
+  color-scheme: light;
+}
+
 *,
 *::before,
 *::after {
@@ -481,6 +513,153 @@ body {
 }
 .alert-fallback-link:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
 
+.alert-banner-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: 540px;
+  margin: 0 auto 0.5rem;
+  padding: 0 0.85rem;
+  box-sizing: border-box;
+  width: 100%;
+}
+.alert--green { background: rgba(52,211,153,0.12); color: #6ee7b7; }
+.alert--ok { background: rgba(52,211,153,0.1); color: #86efac; }
+.alert--ok a { color: #6ee7b7; text-decoration: underline; }
+
+/* Hitri pregled */
+.glance {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+  max-width: 540px;
+  width: 100%;
+  margin: 0 auto 0.65rem;
+  padding: 0 0.85rem;
+  box-sizing: border-box;
+}
+.glance__chip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  padding: 0.45rem 0.4rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  align-items: center;
+}
+.glance__chip--accent { border-color: rgba(56,189,248,0.35); }
+.glance__k { font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.glance__v { font-size: 0.88rem; font-weight: 600; line-height: 1.2; word-break: break-word; }
+
+/* Burja / jugo */
+.bora-content { padding: 0.25rem 1rem 1rem; }
+.bora-hero {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem 0.85rem;
+  align-items: center;
+}
+.bora-hero__emoji { font-size: 2rem; line-height: 1; }
+.bora-hero__body { display: flex; flex-direction: column; gap: 0.15rem; }
+.bora-hero__title { font-weight: 700; font-size: 1.05rem; }
+.bora-hero__meta { font-size: 0.82rem; color: var(--muted); }
+.bora-hero__tip { font-size: 0.78rem; color: var(--muted); }
+.bora-meter {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.3rem;
+}
+.bora-meter__seg {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.08);
+}
+.bora-meter__seg.is-on { background: #38bdf8; }
+.bora--calm .bora-meter__seg.is-on { background: #94a3b8; }
+.bora--mod .bora-meter__seg.is-on { background: #38bdf8; }
+.bora--strong .bora-meter__seg.is-on { background: #fbbf24; }
+.bora--severe .bora-meter__seg.is-on { background: #fb923c; }
+.bora--extreme .bora-meter__seg.is-on { background: #f43f5e; }
+
+/* Postaja vs napoved */
+.skill-content { padding: 0.25rem 1rem 0.85rem; }
+.skill-obs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  align-items: baseline;
+  font-size: 0.85rem;
+  margin-bottom: 0.65rem;
+  color: var(--muted);
+}
+.skill-obs strong { color: var(--text); }
+.skill-obs__rain { margin-left: auto; }
+.skill-head, .skill-row {
+  display: grid;
+  grid-template-columns: 3.4rem 1fr 1.4fr 1fr 1.4fr;
+  gap: 0.25rem;
+  align-items: center;
+  font-size: 0.8rem;
+}
+.skill-head {
+  color: var(--muted);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.25rem;
+}
+.skill-row {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--card-border);
+}
+.skill-row:last-of-type { border-bottom: none; }
+.skill-row__model { font-weight: 600; }
+.skill-row__val { text-align: center; }
+.skill-row__delta { text-align: center; color: var(--muted); }
+.skill-row__delta.is-off { color: #fb923c; font-weight: 600; }
+
+/* Snežna meja */
+.freeze-hero {
+  display: flex;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.25rem 1rem 0.75rem;
+}
+.freeze-hero__val {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #7dd3fc;
+  min-width: 4.5rem;
+}
+.freeze-hero__body { display: flex; flex-direction: column; gap: 0.15rem; }
+.freeze-hero__lbl { font-weight: 600; }
+.freeze-hero__meta, .freeze-hero__risk { font-size: 0.78rem; color: var(--muted); }
+.freeze-days {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding: 0 1rem 0.85rem;
+  scrollbar-width: none;
+}
+.freeze-days::-webkit-scrollbar { display: none; }
+.freeze-day {
+  min-width: 3.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.45rem 0.35rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+}
+.freeze-day__lbl { font-size: 0.65rem; color: var(--muted); }
+.freeze-day__val { font-size: 0.82rem; font-weight: 600; }
+
 /* —— 7-dnevna napoved —— */
 .forecast-card { padding-bottom: 1rem; }
 
@@ -551,6 +730,60 @@ body {
 }
 
 .forecast-day__rain--none { color: var(--muted); }
+
+/* —— Primerjava modelov —— */
+.models-compare {
+  padding: 0.25rem 0.85rem 0.85rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.model-row {
+  display: grid;
+  grid-template-columns: 4.2rem repeat(3, minmax(4.5rem, 1fr));
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--card-border);
+}
+.model-row:last-of-type { border-bottom: none; }
+.model-row--head {
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+.model-row--head .model-row__col,
+.model-row--head .model-row__day {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.model-row__day {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.model-row__col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.12rem;
+  text-align: center;
+  min-height: 2.6rem;
+  justify-content: center;
+}
+.model-row__col--empty { color: var(--muted); font-size: 0.85rem; }
+.model-cell__icon { font-size: 1.15rem; line-height: 1; }
+.model-cell__temps {
+  font-size: 0.82rem;
+  display: flex;
+  gap: 0.25rem;
+  align-items: baseline;
+}
+.model-cell__temps span { color: var(--muted); font-weight: 400; }
+.model-cell__rain {
+  font-size: 0.65rem;
+  color: var(--rain);
+}
 
 /* —— Radar —— */
 .radar-card { padding-bottom: 0.85rem; }
@@ -1713,6 +1946,45 @@ body.is-loading .stat-pill {
   backdrop-filter: blur(12px);
   overflow: hidden;
 }
+
+/* Anomalije */
+.anomaly-content { padding: 0.25rem 1rem 0.85rem; }
+.anom-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.45rem;
+}
+.anom-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.55rem 0.35rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  min-width: 0;
+}
+html[data-contrast="high"] .anom-item {
+  background: rgba(15, 23, 42, 0.04);
+}
+.anom-item__lbl {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+.anom-item__now { font-size: 1.05rem; font-weight: 700; }
+.anom-item__clim { font-size: 0.68rem; color: var(--muted); }
+.anom-item__delta {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-top: 0.15rem;
+}
+.anom--hot  { color: var(--hot); }
+.anom--cold { color: var(--cold); }
+.anom--flat { color: var(--muted); }
 
 .dh-loading {
   padding: 0.75rem 1rem;
@@ -2958,6 +3230,83 @@ body.is-loading .stat-pill {
 .fwi-day.fwi--high     .fwi-day__val { color: #f97316; }
 .fwi-day.fwi--veryhigh .fwi-day__val { color: #ef4444; }
 .fwi-day.fwi--extreme  .fwi-day__val { color: #a855f7; }
+
+/* Gasilski povzetek + FWI komponente */
+.fwi-brief {
+  margin: 0.75rem 1rem 0.35rem;
+  padding: 0.7rem 0.8rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+}
+.fwi-brief__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.fwi-brief__pill {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.06);
+}
+.fwi-brief--ok   { color: #86efac; background: rgba(34,197,94,0.12); }
+.fwi-brief--warn { color: #fde047; background: rgba(234,179,8,0.12); }
+.fwi-brief--hot  { color: #fdba74; background: rgba(249,115,22,0.14); }
+.fwi-brief--ext  { color: #f9a8d4; background: rgba(168,85,247,0.16); }
+.fwi-brief__meta {
+  margin: 0.45rem 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.fwi-brief__notes {
+  margin: 0.45rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.75rem;
+  color: var(--text);
+  line-height: 1.35;
+}
+.fwi-brief__notes li { margin-bottom: 0.2rem; }
+
+.fwi-comps {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.35rem;
+  padding: 0.65rem 1rem 0.25rem;
+}
+.fwi-comp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.4rem 0.2rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  min-width: 0;
+}
+.fwi-comp__k {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.fwi-comp__v {
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+.fwi-comp__t {
+  font-size: 0.55rem;
+  color: var(--muted);
+  line-height: 1.15;
+}
+@media (max-width: 380px) {
+  .fwi-comps { grid-template-columns: repeat(3, 1fr); }
+  .fwi-comp:nth-child(4),
+  .fwi-comp:nth-child(5) { grid-column: span 1; }
+}
 
 /* ——————————————————————————————————————
    NAPOVED ZA MOJO LOKACIJO

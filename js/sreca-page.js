@@ -1,5 +1,6 @@
 import { fetchMultiLocation, wmoIcon } from './forecast.js';
 import { initPwaUpdates } from './pwa-update.js';
+import { initContrast } from './contrast.js';
 
 const GROUPS = {
   slo: [
@@ -95,6 +96,7 @@ async function load() {
 
 function init() {
   initPwaUpdates();
+  initContrast();
   document.getElementById('btn-reload')?.addEventListener('click', load);
   load();
   setInterval(load, 30 * 60 * 1000);

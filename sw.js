@@ -1,4 +1,4 @@
-const CACHE = 'vreme-pwa-static-v28';
+const CACHE = 'vreme-pwa-static-v39';
 
 const ASSETS = [
   './',
@@ -18,8 +18,11 @@ const ASSETS = [
   './js/history-charts.js',
   './js/install-ui.js',
   './js/pwa-update.js',
+  './js/contrast.js',
   './js/app.js',
   './js/history.js',
+  './js/fwi.js',
+  './js/bora.js',
   './js/forecast.js',
   './js/forecast-page.js',
   './js/lokacija-page.js',
@@ -43,10 +46,12 @@ self.addEventListener('message', (event) => {
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) => cache.addAll(ASSETS))
-      .then(() => self.skipWaiting()),
+    (async () => {
+      const cache = await caches.open(CACHE);
+      // Posamezni add – ena napaka ne sme zrušiti celotnega SW
+      await Promise.allSettled(ASSETS.map((url) => cache.add(url).catch(() => null)));
+      await self.skipWaiting();
+    })(),
   );
 });
 

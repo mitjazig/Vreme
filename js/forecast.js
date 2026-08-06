@@ -3,6 +3,8 @@
  * https://open-meteo.com – brez API ključa, CORS-friendly
  */
 
+import { computeFwiSeries } from './fwi.js';
+
 const LAT = 45.4837; // Rakitovec
 const LON = 13.8806; // Rakitovec
 
@@ -177,25 +179,81 @@ export async function fetchAirQuality() {
   };
 }
 
-/** ——————— Požarna nevarnost (FWI) ——————— */
+/** ——————— Požarna nevarnost (FWI, lokalni izračun) ———————
+ * Open-Meteo ne ponuja več fire_weather_index (HTTP 400).
+ * Izračunamo Canadian FWI iz urnih vremenskih podatkov (poldne + 24h dež).
+ */
 export async function fetchFireDanger() {
   const params = new URLSearchParams({
     latitude: LAT,
     longitude: LON,
-    daily: 'fire_weather_index',
+    hourly: 'temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation',
     timezone: 'Europe/Ljubljana',
+    past_days: '14',
     forecast_days: '7',
+    wind_speed_unit: 'kmh',
   });
   const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
-  if (!res.ok) throw new Error(`Fire API HTTP ${res.status}`);
-  const { daily } = await res.json();
-  return (daily.time ?? []).map((date, i) => ({
-    date: new Date(date),
-    fwi: daily.fire_weather_index?.[i] ?? null,
+  if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
+  const { hourly } = await res.json();
+  if (!hourly?.time?.length) throw new Error('Ni urnih podatkov za FWI');
+
+  // Združi po dnevih: poldne (~12:00 lokalno po Open-Meteo) + 24h padavine
+  const byDay = new Map();
+  for (let i = 0; i < hourly.time.length; i++) {
+    const key = hourly.time[i].slice(0, 10); // YYYY-MM-DD (timezone=Europe/Ljubljana)
+    const hour = Number(hourly.time[i].slice(11, 13));
+    let day = byDay.get(key);
+    if (!day) {
+      day = {
+        date: new Date(`${key}T12:00:00`),
+        temp: null,
+        rh: null,
+        wind: null,
+        rain: 0,
+        noonDist: Infinity,
+      };
+      byDay.set(key, day);
+    }
+    day.rain += hourly.precipitation?.[i] ?? 0;
+    const dist = Math.abs(hour - 12);
+    if (dist < day.noonDist) {
+      day.noonDist = dist;
+      day.temp = hourly.temperature_2m?.[i] ?? null;
+      day.rh = hourly.relative_humidity_2m?.[i] ?? null;
+      day.wind = hourly.wind_speed_10m?.[i] ?? null;
+    }
+  }
+
+  const seriesIn = [...byDay.values()]
+    .filter((d) => d.temp != null && d.rh != null && d.wind != null)
+    .sort((a, b) => a.date - b.date);
+
+  if (seriesIn.length < 3) throw new Error('Premalo dni za izračun FWI');
+
+  const computed = computeFwiSeries(seriesIn);
+  const todayKey = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Ljubljana' });
+  const startIdx = Math.max(0, computed.findIndex((d) => {
+    const k = d.date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Ljubljana' });
+    return k >= todayKey;
   }));
+  // Danes + naslednjih 6 (skupaj 7) + vremenski vhodi za gasilski povzetek
+  return computed.slice(startIdx, startIdx + 7).map((d, i) => {
+    const src = seriesIn[startIdx + i];
+    return {
+      ...d,
+      temp: src?.temp ?? null,
+      rh: src?.rh ?? null,
+      wind: src?.wind ?? null,
+      rain: src?.rain ?? null,
+    };
+  });
 }
 
-/** ——————— Napoved za poljubno lokacijo (7 dni + urna) ——————— */
+/** ——————— Napoved za poljubno lokacijo (16 dni + urna) ———————
+ * Brez models=icon_seamless: ICON ima le ~7 dni podatkov; privzeti
+ * Open-Meteo model vrne polnih 16 dni.
+ */
 export async function fetchLocationForecast(lat, lon) {
   const params = new URLSearchParams({
     latitude: lat,
@@ -217,9 +275,8 @@ export async function fetchLocationForecast(lat, lon) {
       'wind_speed_10m_max', 'wind_gusts_10m_max', 'uv_index_max',
       'snowfall_sum', 'precipitation_hours',
     ].join(','),
-    models: 'icon_seamless',   // ICON-D2 (2 km) kjer je na voljo, ICON-EU sicer
     timezone: 'auto',
-    forecast_days: '7',
+    forecast_days: '16',
   });
   const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
   if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
@@ -255,19 +312,21 @@ export async function fetchLocationForecast(lat, lon) {
         };
       })
       .filter(h => h.time >= now),
-    daily: (daily?.time ?? []).map((date, i) => ({
-      date:      new Date(date),
-      code:      daily.weather_code?.[i]              ?? null,
-      max:       daily.temperature_2m_max?.[i]        ?? null,
-      min:       daily.temperature_2m_min?.[i]        ?? null,
-      rain:      daily.precipitation_sum?.[i]         ?? 0,
-      rainProb:  daily.precipitation_probability_max?.[i] ?? null,
-      windMax:   daily.wind_speed_10m_max?.[i]        ?? null,
-      gustMax:   daily.wind_gusts_10m_max?.[i]        ?? null,
-      uvMax:     daily.uv_index_max?.[i]              ?? null,
-      snow:      daily.snowfall_sum?.[i]           ?? 0,
-      precipHrs: daily.precipitation_hours?.[i]    ?? null,
-    })),
+    daily: (daily?.time ?? [])
+      .map((date, i) => ({
+        date:      new Date(date),
+        code:      daily.weather_code?.[i]              ?? null,
+        max:       daily.temperature_2m_max?.[i]        ?? null,
+        min:       daily.temperature_2m_min?.[i]        ?? null,
+        rain:      daily.precipitation_sum?.[i]         ?? 0,
+        rainProb:  daily.precipitation_probability_max?.[i] ?? null,
+        windMax:   daily.wind_speed_10m_max?.[i]        ?? null,
+        gustMax:   daily.wind_gusts_10m_max?.[i]        ?? null,
+        uvMax:     daily.uv_index_max?.[i]              ?? null,
+        snow:      daily.snowfall_sum?.[i]           ?? 0,
+        precipHrs: daily.precipitation_hours?.[i]    ?? null,
+      }))
+      .filter((d) => d.max != null || d.min != null),
   };
 }
 
@@ -281,7 +340,7 @@ export async function fetchWarnings() {
       'precipitation_sum', 'wind_gusts_10m_max', 'snowfall_sum',
     ].join(','),
     timezone: 'Europe/Ljubljana',
-    forecast_days: '7',
+    forecast_days: '16',
   });
   const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -410,7 +469,7 @@ export async function fetchForecast() {
       'sunset',
     ].join(','),
     timezone: 'Europe/Ljubljana',
-    forecast_days: '7',
+    forecast_days: '16',
   });
 
   const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
@@ -428,4 +487,135 @@ export async function fetchForecast() {
     sunrise:  daily.sunrise?.[i] ? new Date(daily.sunrise[i]) : null,
     sunset:   daily.sunset?.[i]  ? new Date(daily.sunset[i])  : null,
   }));
+}
+
+/** Primerjava modelov (ECMWF / ICON / GFS).
+ * WRF ni javno na voljo v brskalniku; Met.no blokira brskalniške User-Agent.
+ * Vsi trije modeli pridejo iz Open-Meteo (CORS, brez ključa).
+ */
+export const FORECAST_MODELS = [
+  { id: 'ecmwf_ifs025',   key: 'ecmwf_ifs025',   short: 'ECMWF', name: 'ECMWF IFS 0.25°', days: 15 },
+  { id: 'icon_seamless',  key: 'icon_seamless',  short: 'ICON',  name: 'DWD ICON',        days: 7  },
+  { id: 'gfs_seamless',   key: 'gfs_seamless',   short: 'GFS',   name: 'NOAA GFS',        days: 16 },
+];
+
+export async function fetchModelComparison() {
+  const modelKeys = FORECAST_MODELS.map((m) => m.key).join(',');
+  const params = new URLSearchParams({
+    latitude: LAT,
+    longitude: LON,
+    daily: [
+      'weather_code',
+      'temperature_2m_max',
+      'temperature_2m_min',
+      'precipitation_sum',
+    ].join(','),
+    models: modelKeys,
+    timezone: 'Europe/Ljubljana',
+    forecast_days: '7', // skupni horizont (ICON)
+  });
+
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+  if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
+  const { daily } = await res.json();
+  if (!daily?.time?.length) throw new Error('Ni podatkov modelov');
+
+  return {
+    days: daily.time.map((date, i) => {
+      const models = {};
+      for (const m of FORECAST_MODELS) {
+        const max = daily[`temperature_2m_max_${m.key}`]?.[i] ?? null;
+        const min = daily[`temperature_2m_min_${m.key}`]?.[i] ?? null;
+        if (max == null && min == null) {
+          models[m.id] = null;
+          continue;
+        }
+        models[m.id] = {
+          code: daily[`weather_code_${m.key}`]?.[i] ?? null,
+          max,
+          min,
+          rain: daily[`precipitation_sum_${m.key}`]?.[i] ?? 0,
+        };
+      }
+      return { date: new Date(date), models };
+    }),
+    models: FORECAST_MODELS,
+  };
+}
+
+/** Snežna meja (freezing level) – urna višina 0 °C */
+export async function fetchFreezingLevel() {
+  const params = new URLSearchParams({
+    latitude: LAT,
+    longitude: LON,
+    hourly: 'freezinglevel_height,temperature_2m',
+    timezone: 'Europe/Ljubljana',
+    forecast_days: '5',
+  });
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+  if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
+  const { hourly } = await res.json();
+  if (!hourly?.time?.length) throw new Error('Ni podatkov snežne meje');
+
+  const now = Date.now();
+  const points = hourly.time.map((t, i) => ({
+    time: new Date(t),
+    height: hourly.freezinglevel_height?.[i] ?? null,
+    temp: hourly.temperature_2m?.[i] ?? null,
+  }));
+
+  const current = points.find((p) => p.time.getTime() >= now) ?? points[0];
+  // Poldne naslednjih dni
+  const daily = [];
+  const byDay = new Map();
+  for (const p of points) {
+    const key = p.time.toLocaleDateString('sv-SE', { timeZone: 'Europe/Ljubljana' });
+    const hour = Number(
+      p.time.toLocaleTimeString('en-GB', { timeZone: 'Europe/Ljubljana', hour: '2-digit', hour12: false }).slice(0, 2),
+    );
+    let day = byDay.get(key);
+    if (!day) {
+      day = { date: new Date(`${key}T12:00:00`), height: null, noonDist: Infinity };
+      byDay.set(key, day);
+    }
+    const dist = Math.abs(hour - 12);
+    if (p.height != null && dist < day.noonDist) {
+      day.noonDist = dist;
+      day.height = p.height;
+    }
+  }
+  for (const d of [...byDay.values()].sort((a, b) => a.date - b.date).slice(0, 5)) {
+    daily.push(d);
+  }
+
+  return { current, daily, stationElev: 338 };
+}
+
+/** Včerajšnja napoved modelov (previous runs) za primerjavo s postajo */
+export async function fetchYesterdayModels(dateKey) {
+  const params = new URLSearchParams({
+    latitude: LAT,
+    longitude: LON,
+    daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum',
+    models: FORECAST_MODELS.map((m) => m.key).join(','),
+    timezone: 'Europe/Ljubljana',
+    start_date: dateKey,
+    end_date: dateKey,
+  });
+  const res = await fetch(`https://previous-runs-api.open-meteo.com/v1/forecast?${params}`);
+  if (!res.ok) throw new Error(`Previous-runs HTTP ${res.status}`);
+  const { daily } = await res.json();
+  if (!daily?.time?.length) throw new Error('Ni včerajšnje napovedi');
+
+  const i = 0;
+  const out = {};
+  for (const m of FORECAST_MODELS) {
+    out[m.id] = {
+      short: m.short,
+      max: daily[`temperature_2m_max_${m.key}`]?.[i] ?? null,
+      min: daily[`temperature_2m_min_${m.key}`]?.[i] ?? null,
+      rain: daily[`precipitation_sum_${m.key}`]?.[i] ?? null,
+    };
+  }
+  return { dateKey, models: out };
 }

@@ -1,5 +1,6 @@
 import { fetchAllArsoStations, arsoIcon } from './arso-stations.js';
 import { initPwaUpdates } from './pwa-update.js';
+import { initContrast } from './contrast.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -101,6 +102,7 @@ async function load() {
 
 function init() {
   initPwaUpdates();
+  initContrast();
 
   document.querySelectorAll('.sort-btn').forEach(btn => {
     btn.addEventListener('click', () => applySort(btn.dataset.sort));
