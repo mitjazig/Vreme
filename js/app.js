@@ -928,6 +928,8 @@ async function init() {
   await clearStaleCaches();
   initPwaUpdates();
   initContrast();
+  const vEl = document.getElementById('footer-version');
+  if (vEl) vEl.textContent = `v${APP_VERSION}`;
   setupInstallUI();
   initWindRose();
   $('#btn-refresh')?.addEventListener('click', refresh);
