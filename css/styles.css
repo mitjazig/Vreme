@@ -2907,6 +2907,31 @@ html[data-contrast="high"] .anom-item {
 .loc-empty__desc  { font-size: 0.82rem; color: var(--muted); margin: 0; max-width: 28rem; line-height: 1.5; }
 .loc-empty__btn   { margin-top: 0.5rem; font-size: 0.95rem; padding: 0.75rem 1.5rem; }
 
+/* ── Lokacija iskanje ──────────────────────────────── */
+.loc-search-wrap   { width: 100%; max-width: 32rem; margin-top: 0.75rem; position: relative; }
+.loc-search-row    { display: flex; gap: 0.5rem; }
+.loc-search-input  {
+  flex: 1; padding: 0.6rem 0.85rem; border-radius: 0.75rem;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+  color: var(--text); font-size: 0.9rem; outline: none;
+}
+.loc-search-input:focus { border-color: var(--accent); }
+.loc-search-input::placeholder { color: var(--muted); }
+.loc-search-btn    { flex-shrink: 0; padding: 0.6rem 1rem; font-size: 0.85rem; }
+.loc-search-results {
+  position: absolute; top: calc(100% + 0.25rem); left: 0; right: 0; z-index: 50;
+  background: #0f1a2b; border: 1px solid rgba(255,255,255,0.12); border-radius: 0.75rem;
+  list-style: none; padding: 0.25rem 0; margin: 0; max-height: 14rem; overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.loc-search-result {
+  padding: 0.6rem 1rem; cursor: pointer; display: flex; flex-direction: column; gap: 0.1rem;
+}
+.loc-search-result:hover, .loc-search-result:focus { background: rgba(255,255,255,0.06); outline: none; }
+.loc-search-result__name { font-size: 0.9rem; color: var(--text); }
+.loc-search-result__sub  { font-size: 0.75rem; color: var(--muted); }
+.loc-search-result--empty { color: var(--muted); font-size: 0.85rem; cursor: default; }
+
 .loc-presets       { width: 100%; max-width: 32rem; margin-top: 0.75rem; }
 .loc-presets__title { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.5rem; }
 .loc-presets__grid {

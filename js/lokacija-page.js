@@ -326,6 +326,47 @@ function renderHourly(hours) {
 }
 
 
+/** Iskanje kraja prek Open-Meteo geocoding */
+async function searchPlace(query) {
+  if (!query.trim()) return;
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=6&language=sl&format=json`;
+  const res  = await fetch(url);
+  const json = await res.json();
+  return json.results ?? [];
+}
+
+function renderSearchResults(results) {
+  const el = $('loc-search-results');
+  if (!el) return;
+
+  if (!results.length) {
+    el.innerHTML = '<li class="loc-search-result loc-search-result--empty">Ni rezultatov</li>';
+    el.classList.remove('hidden');
+    return;
+  }
+
+  el.innerHTML = results.map((r, i) => {
+    const parts = [r.admin1, r.country].filter(Boolean).join(', ');
+    return `<li class="loc-search-result" role="option" tabindex="0"
+      data-lat="${r.latitude}" data-lon="${r.longitude}" data-name="${r.name}${parts ? `, ${parts}` : ''}" data-i="${i}">
+      <span class="loc-search-result__name">${r.name}</span>
+      ${parts ? `<span class="loc-search-result__sub">${parts}</span>` : ''}
+    </li>`;
+  }).join('');
+  el.classList.remove('hidden');
+
+  el.querySelectorAll('.loc-search-result[data-lat]').forEach(li => {
+    li.addEventListener('click', () => {
+      loadForecast(parseFloat(li.dataset.lat), parseFloat(li.dataset.lon), li.dataset.name);
+      el.classList.add('hidden');
+      $('loc-search-input').value = '';
+    });
+    li.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') li.click();
+    });
+  });
+}
+
 function showForecast() {
   $('loc-empty').classList.add('hidden');
   $('loc-forecast').classList.remove('hidden');
@@ -404,6 +445,30 @@ function init() {
       const { lat, lon, name } = JSON.parse(saved);
       loadForecast(lat, lon, name);
     }
+  });
+
+  // Iskanje kraja
+  const searchInput = $('loc-search-input');
+  const searchBtn   = $('btn-loc-search');
+  const resultsEl   = $('loc-search-results');
+
+  async function doSearch() {
+    const q = searchInput?.value ?? '';
+    if (!q.trim()) return;
+    searchBtn.textContent = '…';
+    try {
+      const results = await searchPlace(q);
+      renderSearchResults(results);
+    } catch { renderSearchResults([]); }
+    finally { searchBtn.textContent = 'Išči'; }
+  }
+
+  searchBtn?.addEventListener('click', doSearch);
+  searchInput?.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+  // Zapri rezultate ob kliku zunaj
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.loc-search-wrap')) resultsEl?.classList.add('hidden');
   });
 
   // Prednastavljena mesta
