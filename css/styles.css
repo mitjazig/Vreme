@@ -2907,8 +2907,15 @@ html[data-contrast="high"] .anom-item {
 .loc-empty__desc  { font-size: 0.82rem; color: var(--muted); margin: 0; max-width: 28rem; line-height: 1.5; }
 .loc-empty__btn   { margin-top: 0.5rem; font-size: 0.95rem; padding: 0.75rem 1.5rem; }
 
-/* ── Lokacija iskanje ──────────────────────────────── */
-.loc-search-wrap   { width: 100%; max-width: 32rem; margin-top: 0.75rem; position: relative; }
+/* ── Lokacija topbar iskanje ───────────────────────── */
+.loc-topbar {
+  padding: 0.5rem 1rem;
+  background: rgba(7,15,26,0.85);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  position: sticky; top: 0; z-index: 40;
+  backdrop-filter: blur(12px);
+}
+.loc-search-wrap   { width: 100%; max-width: 36rem; margin: 0 auto; position: relative; }
 .loc-search-row    { display: flex; gap: 0.5rem; }
 .loc-search-input  {
   flex: 1; padding: 0.6rem 0.85rem; border-radius: 0.75rem;

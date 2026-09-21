@@ -435,9 +435,6 @@ function init() {
   // Gumb za geolokacijo
   $('btn-geolocate')?.addEventListener('click', geolocate);
 
-  // Gumb za spremembo lokacije
-  $('btn-change-loc')?.addEventListener('click', showEmpty);
-
   // Gumb za osvežitev
   $('btn-refresh-loc')?.addEventListener('click', () => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -455,12 +452,20 @@ function init() {
   async function doSearch() {
     const q = searchInput?.value ?? '';
     if (!q.trim()) return;
+    searchBtn.disabled = true;
     searchBtn.textContent = '…';
+    setStatus('Iščem…');
     try {
       const results = await searchPlace(q);
+      setStatus('');
       renderSearchResults(results);
-    } catch { renderSearchResults([]); }
-    finally { searchBtn.textContent = 'Išči'; }
+    } catch (err) {
+      setStatus(`Napaka iskanja: ${err.message}`, true);
+      renderSearchResults([]);
+    } finally {
+      searchBtn.disabled = false;
+      searchBtn.textContent = 'Išči';
+    }
   }
 
   searchBtn?.addEventListener('click', doSearch);

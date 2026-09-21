@@ -38,6 +38,18 @@
       </div>
     </header>
 
+    <!-- Iskanje kraja – vedno vidno -->
+    <div class="loc-topbar">
+      <div class="loc-search-wrap">
+        <div class="loc-search-row">
+          <input id="loc-search-input" class="loc-search-input" type="search"
+            placeholder="Išči kraj za napoved…" autocomplete="off" />
+          <button id="btn-loc-search" class="btn btn--ghost loc-search-btn" type="button">Išči</button>
+        </div>
+        <ul id="loc-search-results" class="loc-search-results hidden" role="listbox"></ul>
+      </div>
+    </div>
+
     <p id="status" class="status" role="status"></p>
 
     <main class="main main--forecast" id="main-content">
@@ -50,16 +62,6 @@
         <button id="btn-geolocate" class="btn btn--primary loc-empty__btn" type="button">
           📍 Pridobi mojo lokacijo
         </button>
-
-        <!-- Iskanje kraja -->
-        <div class="loc-search-wrap">
-          <div class="loc-search-row">
-            <input id="loc-search-input" class="loc-search-input" type="search"
-              placeholder="Išči kraj, mesto…" autocomplete="off" />
-            <button id="btn-loc-search" class="btn btn--ghost loc-search-btn" type="button">Išči</button>
-          </div>
-          <ul id="loc-search-results" class="loc-search-results hidden" role="listbox"></ul>
-        </div>
 
         <!-- Prednastavljena mesta -->
         <div class="loc-presets">
@@ -169,10 +171,6 @@
           <div id="loc-hourly" class="forecast-hourly-wrap"></div>
         </section>
 
-        <!-- Gumb za spremembo lokacije -->
-        <button id="btn-change-loc" class="btn btn--ghost loc-change-btn" type="button">
-          📍 Spremeni lokacijo
-        </button>
       </div>
 
     </main>
