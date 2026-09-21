@@ -89,6 +89,18 @@ function renderHourly(hours) {
       weekday: 'short', day: 'numeric',
     });
     const isNewDay = h.isNewDay;
+    const windSpd  = h.wind != null ? Math.round(h.wind) : null;
+    const gustSpd  = h.gust != null ? Math.round(h.gust) : null;
+    const windRot  = h.windDir ?? 0;
+    const windStr  = windSpd != null
+      ? `<span class="hourly-item__wind">
+           <svg class="wind-arrow" viewBox="0 0 24 24" width="12" height="12"
+             style="transform:rotate(${windRot + 180}deg)" aria-hidden="true">
+             <path d="M12 2l4 10H8z" fill="currentColor"/>
+           </svg>
+           ${windSpd}${gustSpd && gustSpd - windSpd >= 5 ? `<span class="hourly-item__gust"> (${gustSpd})</span>` : ''} km/h
+         </span>`
+      : '';
     return `${isNewDay ? `<div class="hourly-day-sep">${dayStr}</div>` : ''}
     <div class="hourly-item">
       <span class="hourly-item__time">${timeStr}</span>
@@ -100,6 +112,7 @@ function renderHourly(hours) {
       ${h.precipProb != null
         ? `<span class="hourly-item__prob">${h.precipProb}%</span>`
         : ''}
+      ${windStr}
     </div>`;
   }).join('')}</div>`;
 }

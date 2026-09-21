@@ -40,7 +40,7 @@ export async function fetchHourlyForecast() {
   const params = new URLSearchParams({
     latitude: LAT,
     longitude: LON,
-    hourly: ['temperature_2m', 'apparent_temperature', 'weather_code', 'precipitation', 'precipitation_probability', 'cape', 'lifted_index'].join(','),
+    hourly: ['temperature_2m', 'apparent_temperature', 'weather_code', 'precipitation', 'precipitation_probability', 'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m', 'cape', 'lifted_index'].join(','),
     timezone: 'Europe/Ljubljana',
     forecast_days: '5',
   });
@@ -66,8 +66,11 @@ export async function fetchHourlyForecast() {
         code:       hourly.weather_code[i],
         precip:     hourly.precipitation[i] ?? 0,
         precipProb: hourly.precipitation_probability[i],
-        cape:       hourly.cape?.[i]         ?? null,
-        li:         hourly.lifted_index?.[i] ?? null,
+        wind:       hourly.wind_speed_10m?.[i]    ?? null,
+        windDir:    hourly.wind_direction_10m?.[i] ?? null,
+        gust:       hourly.wind_gusts_10m?.[i]    ?? null,
+        cape:       hourly.cape?.[i]              ?? null,
+        li:         hourly.lifted_index?.[i]      ?? null,
         isNewDay,
       };
     })

@@ -1197,7 +1197,7 @@ body {
 
 .hourly-item {
   display: grid;
-  grid-template-columns: 3rem 1.6rem 2.5rem 3rem 2rem;
+  grid-template-columns: 3rem 1.6rem 2.5rem 3rem 2rem 1fr;
   align-items: center;
   gap: 0.5rem;
   padding: 0.45rem 1rem;
@@ -1237,6 +1237,17 @@ body {
   font-size: 0.72rem;
   color: var(--muted);
 }
+
+.hourly-item__wind {
+  font-size: 0.72rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  white-space: nowrap;
+}
+.wind-arrow { color: #38bdf8; flex-shrink: 0; }
+.hourly-item__gust { color: #f97316; }
 
 .forecast-day__prob {
   font-size: 0.6rem;
