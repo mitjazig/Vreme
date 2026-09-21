@@ -966,8 +966,8 @@ function refreshArsoRadar() {
 let satLayer = 'msg_fes:rgb_naturalenhncd';
 
 function satelliteUrl(layer) {
-  // Zaokroži na zadnjih 15 min (interval Meteosat)
-  const ms = Date.now();
+  // Zaokroži na zadnjih 15 min (interval Meteosat); -30 min za zamudo procesiranja
+  const ms = Date.now() - 30 * 60 * 1000;
   const slot = new Date(ms - (ms % (15 * 60 * 1000)));
   const time = slot.toISOString().slice(0, 19) + 'Z';
   const bbox = '7,42,22,50'; // Slovenija + širša okolica
