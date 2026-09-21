@@ -3109,6 +3109,26 @@ html[data-contrast="high"] .anom-item {
 .snow-day__val { font-size: 0.8rem; font-weight: 600; color: #bae6fd; text-align: right; }
 .snow-none { font-size: 0.82rem; color: var(--muted); margin: 0.25rem 0; }
 
+/* ── Toča verjetnost ────────────────────────────────── */
+.hail-days   { display: flex; flex-direction: column; gap: 0.5rem; }
+.hail-day    { display: grid; grid-template-columns: 3.5rem 1.5rem 5rem 1fr; align-items: center; gap: 0.5rem; }
+.hail-day__lbl   { font-size: 0.8rem; color: var(--muted); }
+.hail-day__icon  { font-size: 1rem; text-align: center; }
+.hail-day__label { font-size: 0.85rem; font-weight: 600; }
+.hail-day__cape  { font-size: 0.72rem; color: var(--muted); }
+.hail-note   { font-size: 0.62rem; color: var(--muted); margin-top: 0.75rem; }
+
+/* ── Sneška meja profil ─────────────────────────────── */
+.freeze-profile { margin-bottom: 0.75rem; }
+.freeze-profile__title { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.freeze-profile__rows  { display: flex; flex-direction: column; gap: 0.45rem; }
+.fp-row        { display: grid; grid-template-columns: 3rem 1fr 4rem; grid-template-rows: auto auto; gap: 0.1rem 0.5rem; align-items: center; }
+.fp-row__lbl   { font-size: 0.78rem; color: var(--muted); grid-row: 1; }
+.fp-row__bar-wrap { grid-row: 1; background: rgba(255,255,255,0.06); border-radius: 3px; height: 6px; overflow: hidden; }
+.fp-row__bar   { height: 100%; border-radius: 3px; transition: width 0.4s; }
+.fp-row__val   { font-size: 0.8rem; font-weight: 600; grid-row: 1; text-align: right; }
+.fp-row__temps { font-size: 0.68rem; color: var(--muted); grid-column: 2 / 4; grid-row: 2; }
+
 /* Vsebnik napovedi za lokacijo */
 #loc-forecast {
   display: flex;
