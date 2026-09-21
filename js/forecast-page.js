@@ -942,7 +942,10 @@ async function load() {
     if (models.status === 'fulfilled') renderModelComparison(models.value);
     else renderModelComparison(null, models.reason);
 
-    if (hourly.status === 'fulfilled') renderTempChart(hourly.value);
+    if (hourly.status === 'fulfilled') {
+      renderTempChart(hourly.value);
+      renderHailRisk(hourly.value);
+    }
     if (forecast.status === 'fulfilled') renderSunriseDays(forecast.value);
 
     // Plima se računa lokalno, ne zahteva API klica
@@ -960,6 +963,52 @@ function refreshArsoRadar() {
   if (!img) return;
   img.src = `https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif?t=${Date.now()}`;
   if (info) info.textContent = `Posodobljeno: ${new Date().toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+/** —— Toča verjetnost (CAPE + LI) —— */
+function hailLevel(cape, li) {
+  // Lifted Index: < 0 nestabilno, < -4 nevarno
+  // CAPE: J/kg — 0-300 nizko, 300-1000 zmerno, 1000-2500 visoko, >2500 ekstremno
+  if (cape == null) return null;
+  const liMod = (li != null && li < -2) ? 1 : 0; // bonus za negativni LI
+  if (cape > 2000 || (cape > 1000 && liMod)) return { lvl: 3, label: 'Nevarno', color: '#ef4444', icon: '🔴' };
+  if (cape > 1000 || (cape > 500  && liMod)) return { lvl: 2, label: 'Visoko',  color: '#f97316', icon: '🟠' };
+  if (cape > 300  || (cape > 100  && liMod)) return { lvl: 1, label: 'Zmerno',  color: '#facc15', icon: '🟡' };
+  return { lvl: 0, label: 'Nizko', color: '#34d399', icon: '🟢' };
+}
+
+function renderHailRisk(hours) {
+  const el = document.getElementById('hail-content');
+  if (!el || !hours?.length) return;
+
+  // Aggeriraj po dnevu: max CAPE, min LI
+  const days = new Map();
+  for (const h of hours) {
+    const key = h.time.toLocaleDateString('sl-SI', { timeZone: 'Europe/Ljubljana' });
+    const d = days.get(key) ?? { time: h.time, cape: 0, li: null };
+    if (h.cape != null && h.cape > d.cape) d.cape = h.cape;
+    if (h.li  != null && (d.li == null || h.li < d.li)) d.li = h.li;
+    days.set(key, d);
+  }
+
+  const DAY_SL = ['ned','pon','tor','sre','čet','pet','sob'];
+  const today = new Date().toLocaleDateString('sl-SI', { timeZone: 'Europe/Ljubljana' });
+  const rows = [...days.values()].slice(0, 5);
+
+  el.innerHTML = `<div class="hail-days">${rows.map((d, i) => {
+    const lv = hailLevel(d.cape, d.li);
+    if (!lv) return '';
+    const key = d.time.toLocaleDateString('sl-SI', { timeZone: 'Europe/Ljubljana' });
+    const lbl = key === today ? 'Danes' : i === 1 ? 'Jutri' : DAY_SL[d.time.getDay()] + ' ' + d.time.getDate() + '.';
+    const liStr = d.li != null ? ` · LI ${d.li > 0 ? '+' : ''}${d.li.toFixed(0)}` : '';
+    return `<div class="hail-day">
+      <span class="hail-day__lbl">${lbl}</span>
+      <span class="hail-day__icon">${lv.icon}</span>
+      <span class="hail-day__label" style="color:${lv.color}">${lv.label}</span>
+      <span class="hail-day__cape">CAPE ${Math.round(d.cape)}${liStr}</span>
+    </div>`;
+  }).join('')}</div>
+  <p class="hail-note">CAPE = energija nevihte (J/kg) · LI = dvigljivost zraka</p>`;
 }
 
 /** —— Satelitska slika (EUMETSAT WMS) —— */

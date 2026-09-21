@@ -267,8 +267,54 @@ function renderSnow(daily, hourly) {
     pills.push(`<span class="snow-pill snow-pill--freeze">🌡️ Meja: ${freezeLevel.toLocaleString()} m${rangeStr}</span>`);
   }
 
+  // Temperaturni profil po višinah (dnevno povprečje za naslednjih 5 dni)
+  const profileDays = new Map();
+  for (const h of hourly.slice(0, 120)) {
+    const key = h.time.toLocaleDateString('sl-SI', { timeZone: 'Europe/Ljubljana' });
+    const d = profileDays.get(key) ?? { time: h.time, freeze: [], t850: [], t700: [] };
+    if (h.freezeLevel != null) d.freeze.push(h.freezeLevel);
+    if (h.t850 != null) d.t850.push(h.t850);
+    if (h.t700 != null) d.t700.push(h.t700);
+    profileDays.set(key, d);
+  }
+  const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+  const profile = [...profileDays.values()].slice(0, 5).map(d => ({
+    time: d.time,
+    freeze: avg(d.freeze),
+    t850:   avg(d.t850),   // ~1500 m
+    t700:   avg(d.t700),   // ~3000 m
+  }));
+
+  const todayStr = new Date().toLocaleDateString('sl-SI', { timeZone: 'Europe/Ljubljana' });
+
   el.innerHTML = `
     ${pills.length ? `<div class="snow-pills">${pills.join('')}</div>` : ''}
+
+    ${profile.some(d => d.freeze != null) ? `
+    <div class="freeze-profile">
+      <p class="freeze-profile__title">Sneška meja · naslednjih 5 dni</p>
+      <div class="freeze-profile__rows">
+        ${profile.map(d => {
+          const key = d.time.toLocaleDateString('sl-SI', { timeZone: 'Europe/Ljubljana' });
+          const lbl = key === todayStr ? 'Danes' : DAY_SL[d.time.getDay()] + ' ' + d.time.getDate() + '.';
+          const fm  = d.freeze != null ? Math.round(d.freeze) : null;
+          const MAX_ALT = 4000;
+          const pct = fm != null ? Math.min(100, Math.max(0, (fm / MAX_ALT) * 100)) : 0;
+          const t850str = d.t850 != null ? `${d.t850 > 0 ? '+' : ''}${d.t850.toFixed(0)}°` : '—';
+          const t700str = d.t700 != null ? `${d.t700 > 0 ? '+' : ''}${d.t700.toFixed(0)}°` : '—';
+          const color = fm == null ? '#94a3b8' : fm < 500 ? '#f87171' : fm < 1500 ? '#fb923c' : fm < 2500 ? '#facc15' : '#7dd3fc';
+          return `<div class="fp-row">
+            <span class="fp-row__lbl">${lbl}</span>
+            <div class="fp-row__bar-wrap">
+              <div class="fp-row__bar" style="width:${pct.toFixed(0)}%;background:${color}"></div>
+            </div>
+            <span class="fp-row__val" style="color:${color}">${fm != null ? fm.toLocaleString() + ' m' : '—'}</span>
+            <span class="fp-row__temps">1500m ${t850str} · 3000m ${t700str}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : ''}
+
     ${hasAnySnow ? `
     <div class="snow-days">
       ${daily.filter(d => (d.snow ?? 0) > 0.1).map(d => {
@@ -282,7 +328,7 @@ function renderSnow(daily, hourly) {
         </div>`;
       }).join('')}
     </div>` : `<p class="snow-none">Ni pričakovanega snega v 16 dneh.</p>`}
-    <p class="tide-note">Meja sneženja = nadmorska višina 0°C · ICON-D2</p>`;
+    <p class="tide-note">Sneška meja = višina 0°C izoterme · 850 hPa ≈ 1500 m · 700 hPa ≈ 3000 m</p>`;
 }
 
 /** Urna napoved */

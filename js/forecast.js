@@ -40,7 +40,7 @@ export async function fetchHourlyForecast() {
   const params = new URLSearchParams({
     latitude: LAT,
     longitude: LON,
-    hourly: ['temperature_2m', 'apparent_temperature', 'weather_code', 'precipitation', 'precipitation_probability'].join(','),
+    hourly: ['temperature_2m', 'apparent_temperature', 'weather_code', 'precipitation', 'precipitation_probability', 'cape', 'lifted_index'].join(','),
     timezone: 'Europe/Ljubljana',
     forecast_days: '5',
   });
@@ -66,6 +66,8 @@ export async function fetchHourlyForecast() {
         code:       hourly.weather_code[i],
         precip:     hourly.precipitation[i] ?? 0,
         precipProb: hourly.precipitation_probability[i],
+        cape:       hourly.cape?.[i]         ?? null,
+        li:         hourly.lifted_index?.[i] ?? null,
         isNewDay,
       };
     })
@@ -268,6 +270,8 @@ export async function fetchLocationForecast(lat, lon) {
       'precipitation', 'precipitation_probability',
       'wind_speed_10m', 'wind_gusts_10m',
       'snowfall', 'snow_depth', 'freezinglevel_height',
+      'cape', 'lifted_index',
+      'temperature_850hPa', 'temperature_700hPa',
     ].join(','),
     daily: [
       'weather_code', 'temperature_2m_max', 'temperature_2m_min',
@@ -307,8 +311,12 @@ export async function fetchLocationForecast(lat, lon) {
           wind:       hourly.wind_speed_10m?.[i]          ?? null,
           gust:       hourly.wind_gusts_10m?.[i]          ?? null,
           snowfall:   hourly.snowfall?.[i]           ?? 0,
-          snowDepth:  hourly.snow_depth?.[i]          ?? null,  // m
-          freezeLevel: hourly.freezinglevel_height?.[i] ?? null, // m asl
+          snowDepth:  hourly.snow_depth?.[i]          ?? null,
+          freezeLevel: hourly.freezinglevel_height?.[i] ?? null,
+          cape:       hourly.cape?.[i]               ?? null,
+          li:         hourly.lifted_index?.[i]       ?? null,
+          t850:       hourly['temperature_850hPa']?.[i] ?? null,
+          t700:       hourly['temperature_700hPa']?.[i] ?? null,
         };
       })
       .filter(h => h.time >= now),
