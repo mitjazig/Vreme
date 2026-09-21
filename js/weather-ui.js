@@ -92,18 +92,11 @@ export function aggregateByDay(readings, initialPrecipTotal = null) {
   }
 
   const sorted = [...days.values()].sort((a, b) => a.date - b.date);
-  let prevPrecip = initialPrecipTotal;
 
   const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
 
   return sorted.map((d) => {
-    const rain =
-      d.precipTotal != null && prevPrecip != null
-        ? d.precipTotal >= prevPrecip
-          ? d.precipTotal - prevPrecip
-          : d.precipTotal  // counter reset detected: use new total as rain since reset
-        : null;
-    if (d.precipTotal != null) prevPrecip = d.precipTotal;
+    const rain = d.precipTotal;
 
     return {
       key: d.key,
