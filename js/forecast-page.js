@@ -2,7 +2,6 @@ import { initPwaUpdates } from './pwa-update.js';
 import { initContrast } from './contrast.js';
 import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides, fetchFireDanger, fetchLocationForecast, reverseGeocode, fetchWarnings, fetchWindyWaves, fetchWindForecast, fetchModelComparison, fetchFreezingLevel } from './forecast.js';
 import { moonPhase, STATION_LAT, STATION_LON } from './astro.js';
-import { LightningTracker } from './lightning.js';
 import { initNotifications, notifyWarnings } from './notifications.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -837,74 +836,6 @@ function toggleRadarPlay() {
 
 
 
-/** —— Strele (Blitzortung) —— */
-let lightningTracker = null;
-
-function updateLightningUI() {
-  if (!lightningTracker) return;
-  const s = lightningTracker.stats();
-
-  // Status dot
-  const dot = document.getElementById('lightning-dot');
-  if (dot) {
-    dot.className = `lightning-dot ${s.connected ? 'lightning-dot--on' : 'lightning-dot--off'}`;
-    dot.title = s.connected ? 'Povezan' : 'Vzpostavljam povezavo…';
-  }
-
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  set('ls-5m',  s.total5);
-  set('ls-15m', s.total15);
-  set('ls-1h',  s.total60);
-
-  const nearEl = document.getElementById('ls-nearest');
-  const nearWrap = document.getElementById('ls-nearest-wrap');
-  if (s.nearest && nearEl) {
-    nearEl.textContent = `${s.nearest.km} km`;
-    const ageMin = Math.round((Date.now() - s.nearest.time) / 60_000);
-    nearEl.title = `pred ${ageMin} min`;
-    nearWrap?.classList.toggle('lightning-stat--danger', s.nearest.km < 20);
-  } else if (nearEl) {
-    nearEl.textContent = '—';
-    nearWrap?.classList.remove('lightning-stat--danger');
-  }
-
-  // Osveži barve markerjev vsakič
-  lightningTracker.refreshColors();
-}
-
-function initLightningMap() {
-  const mapEl = document.getElementById('lightning-map');
-  if (!mapEl || typeof L === 'undefined') return;
-
-  const lMap = L.map('lightning-map', { zoomControl: true, attributionControl: false })
-    .setView([46.0, 14.5], 6); // Slovenija v centru
-
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© CARTO',
-    subdomains: 'abcd',
-    maxZoom: 10,
-  }).addTo(lMap);
-
-  // Postaja
-  L.circleMarker([STATION_LAT, STATION_LON], {
-    radius: 5, fillColor: '#38bdf8', color: '#fff', weight: 2, fillOpacity: 1,
-  }).bindTooltip('IKOPER43 · Rakitovec', { permanent: false }).addTo(lMap);
-
-  // Krog 50 km od postaje
-  L.circle([STATION_LAT, STATION_LON], {
-    radius: 50_000,
-    color: 'rgba(56,189,248,0.25)',
-    fillColor: 'transparent',
-    weight: 1,
-    dashArray: '4,6',
-  }).addTo(lMap);
-
-  lightningTracker = new LightningTracker(lMap, updateLightningUI);
-  lightningTracker.connect();
-
-  // Osveži barve vsako minuto
-  setInterval(() => lightningTracker?.refreshColors(), 60_000);
-}
 
 function renderFreeze(data, error) {
   const el = document.getElementById('freeze-content');
@@ -1035,10 +966,14 @@ function refreshArsoRadar() {
 let satLayer = 'msg_fes:rgb_naturalenhncd';
 
 function satelliteUrl(layer) {
+  // Zaokroži na zadnjih 15 min (interval Meteosat)
+  const ms = Date.now();
+  const slot = new Date(ms - (ms % (15 * 60 * 1000)));
+  const time = slot.toISOString().slice(0, 19) + 'Z';
   const bbox = '7,42,22,50'; // Slovenija + širša okolica
   return `https://view.eumetsat.int/geoserver/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap`
     + `&LAYERS=${encodeURIComponent(layer)}&BBOX=${bbox}&WIDTH=700&HEIGHT=460`
-    + `&SRS=EPSG:4326&FORMAT=image/jpeg&t=${Date.now()}`;
+    + `&SRS=EPSG:4326&FORMAT=image/jpeg&TIME=${encodeURIComponent(time)}`;
 }
 
 function refreshSatellite() {
@@ -1077,9 +1012,6 @@ async function init() {
 
   // Napoved za lokacijo
   initLocationForecast();
-
-  // Leaflet + Strele
-  initLightningMap();
 
   // Leaflet + RainViewer
   await initRadarMap();
