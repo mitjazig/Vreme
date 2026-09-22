@@ -2936,6 +2936,8 @@ html[data-contrast="high"] .anom-item {
 .loc-search-input:focus { border-color: var(--accent); }
 .loc-search-input::placeholder { color: var(--muted); }
 .loc-search-btn    { flex-shrink: 0; padding: 0.6rem 1rem; font-size: 0.85rem; }
+.loc-gps-btn       { flex-shrink: 0; width: 2.2rem; height: 2.2rem; padding: 0; color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); border-radius: 0.6rem; background: rgba(56,189,248,0.08); }
+.loc-gps-btn:hover { background: rgba(56,189,248,0.18); }
 .loc-search-results {
   position: absolute; top: calc(100% + 0.25rem); left: 0; right: 0; z-index: 50;
   background: #0f1a2b; border: 1px solid rgba(255,255,255,0.12); border-radius: 0.75rem;

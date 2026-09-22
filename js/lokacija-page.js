@@ -478,8 +478,9 @@ function init() {
   initPwaUpdates();
   initContrast();
 
-  // Gumb za geolokacijo
+  // Gumb za geolokacijo (v loc-empty in topbar)
   $('btn-geolocate')?.addEventListener('click', geolocate);
+  $('btn-geolocate-top')?.addEventListener('click', geolocate);
 
   // Gumb za osvežitev
   $('btn-refresh-loc')?.addEventListener('click', () => {
