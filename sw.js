@@ -1,4 +1,4 @@
-const CACHE = 'vreme-pwa-static-v47';
+const CACHE = 'vreme-pwa-static-v48';
 
 const ASSETS = [
   './',

@@ -518,6 +518,15 @@ function init() {
   searchBtn?.addEventListener('click', doSearch);
   searchInput?.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 
+  // Autocomplete med tipkanjem (debounce 350ms)
+  let debounceTimer = null;
+  searchInput?.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    const q = searchInput.value.trim();
+    if (!q) { resultsEl?.classList.add('hidden'); return; }
+    debounceTimer = setTimeout(doSearch, 350);
+  });
+
   // Zapri rezultate ob kliku zunaj
   document.addEventListener('click', e => {
     if (!e.target.closest('.loc-search-wrap')) resultsEl?.classList.add('hidden');
