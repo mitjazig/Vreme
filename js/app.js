@@ -934,6 +934,22 @@ async function init() {
   initWindRose();
   $('#btn-refresh')?.addEventListener('click', refresh);
 
+  // Long-press (2s) na logotipu → skrita božična stran
+  const logoEl = document.getElementById('logo-title');
+  if (logoEl) {
+    let logoTimer = null;
+    const startPress = () => { logoTimer = setTimeout(() => { window.location.href = 'xmas.html'; }, 2000); };
+    const cancelPress = () => { clearTimeout(logoTimer); logoTimer = null; };
+    logoEl.addEventListener('mousedown', startPress);
+    logoEl.addEventListener('touchstart', startPress, { passive: true });
+    logoEl.addEventListener('mouseup', cancelPress);
+    logoEl.addEventListener('mouseleave', cancelPress);
+    logoEl.addEventListener('touchend', cancelPress);
+    logoEl.addEventListener('touchcancel', cancelPress);
+    logoEl.style.cursor = 'default';
+    logoEl.style.userSelect = 'none';
+  }
+
   const cached = loadCache();
   if (cached) {
     try {
