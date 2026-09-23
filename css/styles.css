@@ -2923,8 +2923,9 @@ html[data-contrast="high"] .anom-item {
   padding: 0.5rem 1rem;
   background: rgba(7,15,26,0.85);
   border-bottom: 1px solid rgba(255,255,255,0.07);
-  position: sticky; top: 0; z-index: 40;
+  position: sticky; top: 0; z-index: 100;
   backdrop-filter: blur(12px);
+  overflow: visible;
 }
 .loc-search-wrap   { width: 100%; max-width: 36rem; margin: 0 auto; position: relative; }
 .loc-search-row    { display: flex; gap: 0.5rem; }
@@ -2939,7 +2940,7 @@ html[data-contrast="high"] .anom-item {
 .loc-gps-btn       { flex-shrink: 0; width: 2.2rem; height: 2.2rem; padding: 0; color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); border-radius: 0.6rem; background: rgba(56,189,248,0.08); }
 .loc-gps-btn:hover { background: rgba(56,189,248,0.18); }
 .loc-search-results {
-  position: absolute; top: calc(100% + 0.25rem); left: 0; right: 0; z-index: 50;
+  position: absolute; top: calc(100% + 0.25rem); left: 0; right: 0; z-index: 9999;
   background: #0f1a2b; border: 1px solid rgba(255,255,255,0.12); border-radius: 0.75rem;
   list-style: none; padding: 0.25rem 0; margin: 0; max-height: 14rem; overflow-y: auto;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
