@@ -1,4 +1,4 @@
-const CACHE = 'vreme-pwa-static-v49';
+const CACHE = 'vreme-pwa-static-v50';
 
 const ASSETS = [
   './',
@@ -33,6 +33,9 @@ const ASSETS = [
   './js/arso-stations.js',
   './js/postaje-page.js',
   './postaje.html',
+  './igra.html',
+  './xmas.html',
+  './js/igra.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',

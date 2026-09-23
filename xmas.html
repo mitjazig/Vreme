@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a1628" />
+  <title>🎄 Božič – Vreme Koper</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: #0a1628;
+      color: #f1f5f9;
+      font-family: 'DM Sans', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      overflow: hidden;
+      position: relative;
+    }
+    canvas#snow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .xmas-wrap {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.2rem;
+    }
+    .xmas-tree { font-size: 5rem; line-height: 1; }
+    .xmas-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fbbf24;
+      text-shadow: 0 0 20px #fbbf2466;
+    }
+    .xmas-countdown {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+      margin: 0.5rem 0;
+    }
+    .xmas-unit {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 0.75rem;
+      padding: 0.75rem 0.5rem;
+      min-width: 72px;
+    }
+    .xmas-unit__num {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #fbbf24;
+      line-height: 1;
+      text-shadow: 0 0 16px #fbbf2455;
+    }
+    .xmas-unit__lbl {
+      font-size: 0.65rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 0.25rem;
+    }
+    .xmas-msg { font-size: 0.9rem; color: #94a3b8; }
+    .xmas-back {
+      margin-top: 1rem;
+      color: #64748b;
+      font-size: 0.82rem;
+      text-decoration: none;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 2rem;
+      padding: 0.4rem 1.2rem;
+    }
+    .xmas-back:hover { color: #94a3b8; }
+    .xmas-done { font-size: 1.1rem; color: #34d399; }
+    @keyframes sway { 0%,100%{transform:rotate(-2deg)} 50%{transform:rotate(2deg)} }
+    .xmas-tree { animation: sway 4s ease-in-out infinite; display: inline-block; }
+  </style>
+</head>
+<body>
+  <canvas id="snow"></canvas>
+  <div class="xmas-wrap">
+    <span class="xmas-tree">🎄</span>
+    <p class="xmas-title">Do Božiča še…</p>
+    <div class="xmas-countdown">
+      <div class="xmas-unit"><div class="xmas-unit__num" id="cd-days">—</div><div class="xmas-unit__lbl">dni</div></div>
+      <div class="xmas-unit"><div class="xmas-unit__num" id="cd-hours">—</div><div class="xmas-unit__lbl">ur</div></div>
+      <div class="xmas-unit"><div class="xmas-unit__num" id="cd-mins">—</div><div class="xmas-unit__lbl">min</div></div>
+      <div class="xmas-unit"><div class="xmas-unit__num" id="cd-secs">—</div><div class="xmas-unit__lbl">sek</div></div>
+    </div>
+    <p class="xmas-msg" id="xmas-msg">🎁 Kmalu!</p>
+    <a href="./" class="xmas-back">← Nazaj</a>
+  </div>
+
+  <script>
+    // Countdown
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function update() {
+      const now = new Date();
+      const year = now.getMonth() >= 11 && now.getDate() > 24 ? now.getFullYear() + 1 : now.getFullYear();
+      const target = new Date(year, 11, 24, 0, 0, 0); // 24. december
+      const diff = target - now;
+      if (diff <= 0) {
+        document.getElementById('cd-days').textContent  = '🎄';
+        document.getElementById('cd-hours').textContent = '🎄';
+        document.getElementById('cd-mins').textContent  = '🎄';
+        document.getElementById('cd-secs').textContent  = '🎄';
+        document.getElementById('xmas-msg').textContent = '🎉 Vesel Božič!';
+        return;
+      }
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      document.getElementById('cd-days').textContent  = d;
+      document.getElementById('cd-hours').textContent = pad(h);
+      document.getElementById('cd-mins').textContent  = pad(m);
+      document.getElementById('cd-secs').textContent  = pad(s);
+
+      // Sporočilo glede na bližino
+      const msg = document.getElementById('xmas-msg');
+      if (d > 60)       msg.textContent = '🎁 Še malo potrpljenja…';
+      else if (d > 14)  msg.textContent = '⛄ Že se bliža!';
+      else if (d > 7)   msg.textContent = '🔔 Samo še ' + d + ' dni!';
+      else if (d > 1)   msg.textContent = '🌟 Samo ' + d + ' dni!';
+      else if (d === 1) msg.textContent = '🎄 Jutri je Božič!';
+      else              msg.textContent = '🎉 Danes je Božič!';
+    }
+    update();
+    setInterval(update, 1000);
+
+    // Sneg na canvasu
+    const canvas = document.getElementById('snow');
+    const ctx = canvas.getContext('2d');
+    let flakes = [];
+
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function daysToXmas() {
+      const now = new Date();
+      const yr  = now.getMonth() >= 11 && now.getDate() > 24 ? now.getFullYear() + 1 : now.getFullYear();
+      return Math.max(1, Math.ceil((new Date(yr, 11, 24) - now) / 86400000));
+    }
+
+    // Več snežink ko je bliže božič
+    function snowCount() { return Math.round(80 + (365 - Math.min(365, daysToXmas())) * 0.5); }
+
+    for (let i = 0; i < snowCount(); i++) {
+      flakes.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        r: 2 + Math.random() * 4,
+        speed: 0.4 + Math.random() * 1.2,
+        drift: (Math.random() - 0.5) * 0.4,
+        alpha: 0.4 + Math.random() * 0.6,
+      });
+    }
+
+    function drawSnow() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const f of flakes) {
+        ctx.save();
+        ctx.globalAlpha = f.alpha;
+        ctx.fillStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        f.y += f.speed;
+        f.x += f.drift;
+        if (f.y > canvas.height + 10) {
+          f.y = -10;
+          f.x = Math.random() * canvas.width;
+        }
+        if (f.x < -10) f.x = canvas.width + 10;
+        if (f.x > canvas.width + 10) f.x = -10;
+      }
+      requestAnimationFrame(drawSnow);
+    }
+    drawSnow();
+  </script>
+</body>
+</html>

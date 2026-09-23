@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#070f1a" />
+  <title>Ulovi dež – Vreme Koper</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    body { background: #070f1a; color: #f1f5f9; font-family: 'DM Sans', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100dvh; }
+    .game-header { width: 100%; max-width: 420px; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; }
+    .game-header__back { color: #94a3b8; text-decoration: none; font-size: 0.85rem; }
+    .game-header__title { font-size: 1rem; font-weight: 700; }
+    .game-wrap { position: relative; width: 100%; max-width: 420px; flex: 1; display: flex; flex-direction: column; align-items: center; padding: 0 0.5rem 1rem; }
+    canvas { border-radius: 1rem; display: block; touch-action: none; background: transparent; }
+    .hud { width: 100%; max-width: 420px; display: flex; justify-content: space-between; padding: 0.5rem 1rem; font-size: 0.85rem; }
+    .hud__score { font-weight: 700; font-size: 1.1rem; color: #38bdf8; }
+    .hud__best  { color: #94a3b8; }
+    .hud__lives { letter-spacing: 0.15em; }
+    .weather-badge { font-size: 0.72rem; color: #94a3b8; padding: 0 1rem 0.5rem; text-align: center; }
+    #overlay {
+      position: absolute; inset: 0; border-radius: 1rem;
+      background: rgba(7,15,26,0.88); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 1rem;
+      backdrop-filter: blur(4px);
+    }
+    #overlay h2 { font-size: 1.6rem; margin: 0; }
+    #overlay p  { margin: 0; color: #94a3b8; font-size: 0.9rem; text-align: center; padding: 0 1.5rem; }
+    #overlay .score-big { font-size: 2.5rem; font-weight: 700; color: #38bdf8; }
+    #btn-start { padding: 0.75rem 2rem; border-radius: 2rem; background: #38bdf8; color: #070f1a; font-weight: 700; font-size: 1rem; border: none; cursor: pointer; }
+    #btn-start:hover { background: #7dd3fc; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="game-header">
+    <a href="./" class="game-header__back">← Nazaj</a>
+    <span class="game-header__title">🌧️ Ulovi dež</span>
+    <span></span>
+  </div>
+
+  <div class="hud">
+    <span class="hud__score" id="hud-score">0</span>
+    <span class="hud__lives" id="hud-lives">❤️❤️❤️</span>
+    <span class="hud__best" id="hud-best">Rekord: 0</span>
+  </div>
+
+  <div class="game-wrap">
+    <canvas id="game-canvas" width="400" height="520"></canvas>
+    <div id="overlay">
+      <h2 id="overlay-title">🌧️ Ulovi dež</h2>
+      <p id="overlay-desc">Lovi kapljice, izogibaj se strelam.<br>Puščice ← → ali drži prst.</p>
+      <span class="score-big hidden" id="overlay-score"></span>
+      <button id="btn-start">Začni igro</button>
+    </div>
+  </div>
+
+  <p class="weather-badge" id="weather-badge">Nalagam vreme…</p>
+
+  <nav class="bottom-nav" aria-label="Glavna navigacija">
+    <a href="./" class="bottom-nav__link">
+      <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v9m0 0 7.5-4.5M12 12 4.5 7.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>Zdaj
+    </a>
+    <a href="./forecast.html" class="bottom-nav__link">
+      <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 13v7"/><path d="M8.56 9.56a6 6 0 0 0 0 4.88M15.44 9.56a6 6 0 0 1 0 4.88"/><path d="M5.12 6.12a11 11 0 0 0 0 11.76M18.88 6.12a11 11 0 0 1 0 11.76"/><circle cx="12" cy="13" r="1.5" fill="currentColor" stroke="none"/></svg>Napoved
+    </a>
+    <a href="./lokacija.html" class="bottom-nav__link">
+      <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>Lokacija
+    </a>
+    <a href="./postaje.html" class="bottom-nav__link">
+      <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Postaje
+    </a>
+    <a href="./sreca.html" class="bottom-nav__link">
+      <svg class="bottom-nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>Kraji
+    </a>
+  </nav>
+
+  <script type="module" src="js/igra.js"></script>
+</body>
+</html>
