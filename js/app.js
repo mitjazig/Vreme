@@ -934,19 +934,16 @@ async function init() {
   initWindRose();
   $('#btn-refresh')?.addEventListener('click', refresh);
 
-  // Long-press (2s) na logotipu → skrita božična stran
+  // 5 hitri kliki/dotiki na logotipu → skrita božična stran
   const logoEl = document.getElementById('logo-title');
   if (logoEl) {
-    let logoTimer = null;
-    const startPress = () => { logoTimer = setTimeout(() => { window.location.href = 'xmas.html'; }, 2000); };
-    const cancelPress = () => { clearTimeout(logoTimer); logoTimer = null; };
-    logoEl.addEventListener('mousedown', startPress);
-    logoEl.addEventListener('touchstart', startPress, { passive: true });
-    logoEl.addEventListener('mouseup', cancelPress);
-    logoEl.addEventListener('mouseleave', cancelPress);
-    logoEl.addEventListener('touchend', cancelPress);
-    logoEl.addEventListener('touchcancel', cancelPress);
-    logoEl.style.cursor = 'default';
+    let tapCount = 0, tapTimer = null;
+    logoEl.addEventListener('click', () => {
+      tapCount++;
+      clearTimeout(tapTimer);
+      if (tapCount >= 5) { window.location.href = 'xmas.html'; return; }
+      tapTimer = setTimeout(() => { tapCount = 0; }, 1500);
+    });
     logoEl.style.userSelect = 'none';
   }
 
