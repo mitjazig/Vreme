@@ -95,7 +95,7 @@ export function moonDayType(date = new Date(), moon = null) {
 }
 
 // ——— Setveni koledar po mesecih —————————————————————————————————————————
-// Prilagojen za Kras / Primorska (nadmorska višina ~380 m, USDA cona 8a)
+// Prilagojen za Kras / Primorska (nadmorska višina ~500 m, USDA cona 8a)
 
 const SOWING_CALENDAR = {
   1: [

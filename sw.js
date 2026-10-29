@@ -1,4 +1,7 @@
-const CACHE = 'vreme-pwa-static-v50';
+const CACHE = 'vreme-pwa-static-v58';
+
+const PWS_STATION = 'IKOPER43';
+const PWS_API_KEY = '422e0bf8dee443c2ae0bf8dee4e3c22c';
 
 const ASSETS = [
   './',
@@ -13,6 +16,10 @@ const ASSETS = [
   './js/config.js',
   './js/chart-theme.js',
   './js/sheets.js',
+  './js/pws.js',
+  './js/brief.js',
+  './js/folk.js',
+  './js/onthisday.js',
   './js/weather-ui.js',
   './js/charts.js',
   './js/history-charts.js',
@@ -30,6 +37,7 @@ const ASSETS = [
   './js/wind-rose.js',
   './js/notifications.js',
   './js/agro.js',
+  './js/mushrooms.js',
   './js/arso-stations.js',
   './js/postaje-page.js',
   './postaje.html',
@@ -51,7 +59,6 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE);
-      // Posamezni add – ena napaka ne sme zrušiti celotnega SW
       await Promise.allSettled(ASSETS.map((url) => cache.add(url).catch(() => null)));
       await self.skipWaiting();
     })(),
@@ -89,11 +96,45 @@ async function networkFirst(request) {
   }
 }
 
+function pwsUpstream(kind) {
+  const base = 'https://api.weather.com/v2/pws/observations';
+  const q = `stationId=${encodeURIComponent(PWS_STATION)}&format=json&units=m&numericPrecision=decimal&apiKey=${encodeURIComponent(PWS_API_KEY)}`;
+  if (kind === 'current') return `${base}/current?${q}`;
+  if (kind === 'hourly7') return `${base}/hourly/7day?${q}`;
+  if (kind === 'today') return `${base}/all/1day?${q}`;
+  return null;
+}
+
+async function proxyPws(kind) {
+  const upstream = pwsUpstream(kind);
+  if (!upstream) {
+    return new Response(JSON.stringify({ error: 'Unknown PWS path' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  const res = await fetch(upstream, { cache: 'no-store' });
+  const text = await res.text();
+  return new Response(text, {
+    status: res.status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+    },
+  });
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
+
+  if (url.pathname.includes('/api/pws/')) {
+    const kind = url.pathname.split('/').filter(Boolean).pop();
+    event.respondWith(proxyPws(kind));
+    return;
+  }
 
   if (url.hostname.includes('google.com')) {
     event.respondWith(fetch(request));

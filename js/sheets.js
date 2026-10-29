@@ -1,4 +1,5 @@
-import { SHEET, YEAR_SHEETS } from './config.js';
+import { SHEET, YEAR_SHEETS, PWS } from './config.js';
+import { fetchPwsCurrent, fetchPwsHourly7, summaryFromReadings } from './pws.js';
 
 function gvizUrl({ gid, sheet, query }) {
   const base = `https://docs.google.com/spreadsheets/d/${SHEET.id}/gviz/tq`;
@@ -323,10 +324,37 @@ export async function fetchSummary() {
 }
 
 export async function loadWeatherBundle() {
+  if (PWS.preferLive) {
+    try {
+      const [hourly, current] = await Promise.all([
+        fetchPwsHourly7(),
+        fetchPwsCurrent(),
+      ]);
+      let readings = hourly?.length ? [...hourly] : [];
+      if (current?.time) {
+        const last = readings[readings.length - 1];
+        if (!last || current.time - last.time > 60_000) readings.push(current);
+        else readings[readings.length - 1] = { ...last, ...current };
+      }
+      if (readings.length) {
+        const summary = summaryFromReadings(readings);
+        return {
+          readings,
+          latest: readings[readings.length - 1],
+          summary,
+          fetchedAt: new Date(),
+          source: 'pws',
+        };
+      }
+    } catch (err) {
+      console.warn('PWS live ni na voljo, Sheets:', err);
+    }
+  }
+
   const [readings, summary] = await Promise.all([
     fetchRecentReadings(168),
     fetchSummary().catch(() => ({})),
   ]);
   const latest = readings[readings.length - 1] || null;
-  return { readings, latest, summary, fetchedAt: new Date() };
+  return { readings, latest, summary, fetchedAt: new Date(), source: 'sheets' };
 }

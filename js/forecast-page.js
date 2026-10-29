@@ -1,6 +1,6 @@
 import { initPwaUpdates } from './pwa-update.js';
 import { initContrast } from './contrast.js';
-import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides, fetchFireDanger, fetchLocationForecast, reverseGeocode, fetchWarnings, fetchWindyWaves, fetchWindForecast, fetchModelComparison, fetchFreezingLevel } from './forecast.js';
+import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides, fetchFireDanger, fetchLocationForecast, reverseGeocode, fetchWarnings, fetchWindyWaves, fetchWindForecast, fetchModelComparison, fetchFreezingLevel, fetchSnowForecast } from './forecast.js';
 import { moonPhase, STATION_LAT, STATION_LON } from './astro.js';
 import { initNotifications, notifyWarnings } from './notifications.js';
 
@@ -858,7 +858,7 @@ function renderFreeze(data, error) {
     return;
   }
   const h = data.current.height;
-  const elev = data.stationElev ?? 338;
+  const elev = data.stationElev ?? 500;
   const above = h != null ? Math.max(0, Math.round(h - elev)) : null;
   const risk = h != null && h <= elev + 200
     ? (h <= elev ? 'Zmrzal pri tleh / sneg možen' : 'Snežna meja blizu postaje')
@@ -886,6 +886,72 @@ function renderFreeze(data, error) {
     <p class="tide-note">Open-Meteo · freezinglevel · poldne</p>`;
 }
 
+function renderSnowForecast(data, error) {
+  const el = document.getElementById('snow-content');
+  const sub = document.getElementById('snow-sub');
+  if (!el) return;
+  if (!data?.days?.length) {
+    el.innerHTML = `<p class="forecast-loading">Snežna napoved ni na voljo.${error?.message ? ` (${error.message})` : ''}</p>`;
+    return;
+  }
+
+  const DAY_SL = ['ned', 'pon', 'tor', 'sre', 'čet', 'pet', 'sob'];
+  const elev = data.stationElev ?? 500;
+  const total = data.totalSnow ?? 0;
+  const next = data.nextSnow;
+  let headline = 'Brez snega v naslednjih 7 dneh';
+  if (total >= 0.5) {
+    headline = `Skupaj ~${total < 1 ? total.toFixed(1) : Math.round(total)} cm snega (7 dni)`;
+  } else if (next?.kind === 'mix') {
+    headline = 'Možna mešanica / mokri sneg';
+  }
+
+  if (sub) {
+    sub.textContent = next && next.snow >= 0.5
+      ? `Naslednji sneg: ${DAY_SL[next.date.getDay()]} ${next.date.getDate()}. · ${next.snow.toFixed(1)} cm`
+      : `Rakitovec · ${elev} m · 7 dni`;
+  }
+
+  const hoursWithSnow = (data.next48 ?? []).filter((h) => (h.snow ?? 0) >= 0.05).slice(0, 12);
+
+  el.innerHTML = `
+    <div class="snow-hero">
+      <span class="snow-hero__emoji">${total >= 5 ? '❄️' : total >= 0.5 ? '🌨️' : next?.kind === 'mix' ? '🌧️❄️' : '🌤️'}</span>
+      <div class="snow-hero__body">
+        <span class="snow-hero__title">${headline}</span>
+        <span class="snow-hero__meta">Postaja ${elev} m · Open-Meteo</span>
+      </div>
+    </div>
+    <div class="snow-days">
+      ${data.days.map((d, i) => {
+        const lbl = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : `${DAY_SL[d.date.getDay()]} ${d.date.getDate()}.`;
+        const snowStr = d.snow >= 0.1 ? `${d.snow < 1 ? d.snow.toFixed(1) : Math.round(d.snow)} cm` : '·';
+        const kindCls = d.kind === 'snow' ? 'snow-day--snow' : d.kind === 'mix' ? 'snow-day--mix' : '';
+        const freezeStr = d.freeze != null ? `${Math.round(d.freeze)} m` : '—';
+        return `<div class="snow-day ${kindCls}">
+          <span class="snow-day__lbl">${lbl}</span>
+          <span class="snow-day__icon">${wmoIcon(d.code)}</span>
+          <span class="snow-day__snow">${snowStr}</span>
+          <span class="snow-day__t">${d.max != null ? Math.round(d.max) : '—'}° / ${d.min != null ? Math.round(d.min) : '—'}°</span>
+          <span class="snow-day__fl" title="Snežna meja">${freezeStr}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    ${hoursWithSnow.length ? `
+      <div class="snow-hours-head">Urno sneženje (naslednje ure)</div>
+      <div class="snow-hours">
+        ${hoursWithSnow.map((h) => {
+          const hh = h.time.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' });
+          return `<div class="snow-hour">
+            <span class="snow-hour__t">${hh}</span>
+            <span class="snow-hour__v">${h.snow.toFixed(1)} cm</span>
+            <span class="snow-hour__temp">${h.temp != null ? Math.round(h.temp) + '°' : ''}</span>
+          </div>`;
+        }).join('')}
+      </div>` : ''}
+    <p class="tide-note">cm = novi sneg · snežna meja = višina 0 °C (poldne)</p>`;
+}
+
 function renderWarnings(warnings) {
   const el = document.getElementById('warn-list');
   const card = document.getElementById('warn-card');
@@ -910,7 +976,7 @@ function renderWarnings(warnings) {
 async function load() {
   setStatus('Nalagam napoved…');
   try {
-    const [forecast, hourly, sea, aq, fire, warnings, waves, windFc, models, freeze] = await Promise.allSettled([
+    const [forecast, hourly, sea, aq, fire, warnings, waves, windFc, models, freeze, snow] = await Promise.allSettled([
       fetchForecast(),
       fetchHourlyForecast(),
       fetchSeaTemp(),
@@ -921,6 +987,7 @@ async function load() {
       fetchWindForecast(),
       fetchModelComparison(),
       fetchFreezingLevel(),
+      fetchSnowForecast(),
     ]);
 
     if (forecast.status === 'fulfilled') renderForecast(forecast.value);
@@ -945,6 +1012,9 @@ async function load() {
 
     if (freeze.status === 'fulfilled') renderFreeze(freeze.value);
     else renderFreeze(null, freeze.reason);
+
+    if (snow.status === 'fulfilled') renderSnowForecast(snow.value);
+    else renderSnowForecast(null, snow.reason);
 
     if (waves.status === 'fulfilled') renderWaves(waves.value);
     else renderWaves(null);

@@ -83,14 +83,56 @@
         <div id="metrics" class="now-panel__grid" aria-label="Meritve"></div>
       </section>
 
+      <!-- Dnevni brief -->
+      <section class="card brief-card" aria-label="Dnevni brief">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(125,211,252,0.15);color:#7dd3fc" aria-hidden="true">📝</span>
+          <div>
+            <h2 class="card__title">Dnevni brief</h2>
+            <p class="card__desc" id="brief-sub">Rakitovec · danes</p>
+          </div>
+        </div>
+        <div id="brief-content" class="brief-content">
+          <p class="forecast-loading">Nalagam…</p>
+        </div>
+      </section>
+
       <!-- Sonce & luna -->
       <div id="sun-strip" class="sun-strip" aria-label="Sonce in luna"></div>
+
+      <!-- Ljudski rek -->
+      <section class="card folk-card" aria-label="Ljudski rek">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(251,191,36,0.15);color:#fbbf24" aria-hidden="true">📜</span>
+          <div>
+            <h2 class="card__title">Ljudski rek</h2>
+            <p class="card__desc" id="folk-sub">Danes</p>
+          </div>
+        </div>
+        <div id="folk-content" class="folk-content">
+          <p class="forecast-loading">Nalagam…</p>
+        </div>
+      </section>
 
       <!-- Zanimivost dneva -->
       <div id="day-fact" class="day-fact" hidden aria-label="Zanimivost dneva"></div>
 
-      <!-- Ta dan v preteklosti -->
+      <!-- Ta dan v preteklosti (postaja) -->
       <div id="day-history" class="day-history" hidden aria-label="Ta dan v preteklosti"></div>
+
+      <!-- Zgodovina na današnji dan -->
+      <section class="card history-day-card" aria-label="Na današnji dan">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(167,139,250,0.15);color:#a78bfa" aria-hidden="true">🏛️</span>
+          <div>
+            <h2 class="card__title">Na današnji dan</h2>
+            <p class="card__desc" id="othis-sub">Zgodovina · svet</p>
+          </div>
+        </div>
+        <div id="othis-content" class="othis-content">
+          <p class="forecast-loading">Nalagam…</p>
+        </div>
+      </section>
 
       <!-- Anomalije -->
       <section id="anomaly-card" class="card" hidden aria-label="Anomalije">
@@ -149,6 +191,20 @@
         </div>
       </section>
 
+      <!-- Gobji indeks -->
+      <section class="card mushroom-card" aria-label="Gobji indeks">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(52,211,153,0.15);color:#34d399" aria-hidden="true">🍄</span>
+          <div>
+            <h2 class="card__title">Gobji indeks</h2>
+            <p class="card__desc" id="mushroom-sub">Dež · temperatura · sezona</p>
+          </div>
+        </div>
+        <div id="mushroom-content" class="mushroom-content">
+          <p class="forecast-loading">Nalagam…</p>
+        </div>
+      </section>
+
       <!-- Postaja vs napoved -->
       <section class="card" aria-label="Postaja proti napovedi">
         <div class="card__head">
@@ -163,17 +219,32 @@
         </div>
       </section>
 
-      <section class="card chart-card chart-card--hero">
+      <!-- WU live gost graf -->
+      <section class="card chart-card chart-card--hero" aria-label="WU live graf">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(52,211,153,0.15);color:#34d399" aria-hidden="true">📡</span>
+          <div>
+            <h2 class="card__title">WU live · danes</h2>
+            <p class="card__desc" id="live-chart-sub">Hitre meritve · temperatura in sunki</p>
+          </div>
+        </div>
+        <div class="chart-wrap chart-wrap--hero chart-wrap--has-empty">
+          <canvas id="chart-live" aria-label="Graf WU live meritev danes"></canvas>
+          <p id="live-chart-empty" class="chart-empty hidden">Live točke niso na voljo</p>
+        </div>
+      </section>
+
+      <section class="card chart-card">
         <div class="card__head">
           <span class="card__icon card__icon--warm" aria-hidden="true">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
           </span>
           <div>
             <h2 class="card__title">Zadnjih 24 ur</h2>
-            <p class="card__desc">Temperatura in vlažnost</p>
+            <p class="card__desc">Urna povprečja · temperatura in vlažnost</p>
           </div>
         </div>
-        <div class="chart-wrap chart-wrap--hero">
+        <div class="chart-wrap chart-wrap--short">
           <canvas id="chart-hourly" aria-label="Graf temperature in vlažnosti"></canvas>
         </div>
       </section>
@@ -227,7 +298,7 @@
 
     <footer class="footer">
       <p>Postaja <strong>IKOPER43</strong> · Koper, Slovenija</p>
-      <p class="footer__meta">Google Sheets · <a href="igra.html" class="footer__secret">EasyWeather</a> · <span id="footer-version"></span></p>
+      <p class="footer__meta">WU live · Sheets · <a href="igra.html" class="footer__secret">EasyWeather</a> · <span id="footer-version"></span></p>
     </footer>
 
         <nav class="bottom-nav" aria-label="Glavna navigacija">

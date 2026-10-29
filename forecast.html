@@ -112,6 +112,47 @@
         </div>
       </section>
 
+      <!-- Snežna napoved -->
+      <section class="card snow-card" aria-label="Snežna napoved">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(224,242,254,0.2);color:#bae6fd" aria-hidden="true">🌨️</span>
+          <div>
+            <h2 class="card__title">Snežna napoved</h2>
+            <p class="card__desc" id="snow-sub">Rakitovec · 500 m · 7 dni</p>
+          </div>
+        </div>
+        <div id="snow-content" class="snow-content">
+          <p class="forecast-loading">Nalagam…</p>
+        </div>
+      </section>
+
+      <!-- Karta sneženja / snežne odeje -->
+      <section class="card radar-card" aria-label="Karta sneženja">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(186,230,253,0.15);color:#7dd3fc" aria-hidden="true">🗺️</span>
+          <div>
+            <h2 class="card__title">Karta sneženja</h2>
+            <p class="card__desc">Windy · snežna odeja · Rakitovec</p>
+          </div>
+        </div>
+        <div class="windy-wrap">
+          <iframe
+            id="windy-snow-iframe"
+            src="https://embed.windy.com/embed2.html?lat=45.470&lon=13.971&detailLat=45.470&detailLon=13.971&width=650&height=450&zoom=8&level=surface&overlay=snowcover&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=true&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1"
+            frameborder="0"
+            allowfullscreen
+            loading="lazy"
+            title="Windy karta snežne odeje"
+          ></iframe>
+        </div>
+        <p class="tide-note snow-map-note">
+          Snežna odeja (ECMWF). Za napoved padavin kot sneg preklopi plast v
+          <a href="https://www.windy.com/-Snowcover-snowcover?snowcover,45.470,13.971,8" target="_blank" rel="noopener">Windy ↗</a>
+          ali
+          <a href="https://www.meteoblue.com/sl/vreme/maps/rakitovec_slovenija_3192017#coords=9.5/45.48/13.88&map=snowAccumulation~hourly~auto~none~none~none~none~none~none~auto~none" target="_blank" rel="noopener">meteoblue ↗</a>.
+        </p>
+      </section>
+
       <!-- Podrobna napoved po urah -->
       <section class="card" aria-label="Urna napoved">
         <div class="card__head">

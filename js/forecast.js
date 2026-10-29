@@ -5,8 +5,10 @@
 
 import { computeFwiSeries } from './fwi.js';
 
-const LAT = 45.4837; // Rakitovec
-const LON = 13.8806; // Rakitovec
+const LAT = 45.469639; // IKOPER43 (WU)
+const LON = 13.971358; // IKOPER43 (WU)
+/** IKOPER43 Rakitovec / Koper (WU elev ~547 m; uporabnik: ~500 m) */
+const STATION_ELEV_M = 500;
 
 const WMO_ICONS = {
   0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
@@ -599,7 +601,114 @@ export async function fetchFreezingLevel() {
     daily.push(d);
   }
 
-  return { current, daily, stationElev: 338 };
+  return { current, daily, stationElev: STATION_ELEV_M };
+}
+
+/**
+ * Snežna napoved za Rakitovec – dnevni sneg (cm), urna naslednja 48h, snežna meja.
+ */
+export async function fetchSnowForecast() {
+  const params = new URLSearchParams({
+    latitude: LAT,
+    longitude: LON,
+    daily: [
+      'weather_code',
+      'temperature_2m_max',
+      'temperature_2m_min',
+      'precipitation_sum',
+      'snowfall_sum',
+      'precipitation_probability_max',
+    ].join(','),
+    hourly: [
+      'snowfall',
+      'temperature_2m',
+      'precipitation',
+      'weather_code',
+      'freezinglevel_height',
+    ].join(','),
+    timezone: 'Europe/Ljubljana',
+    forecast_days: '7',
+  });
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+  if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
+  const { daily, hourly } = await res.json();
+  if (!daily?.time?.length) throw new Error('Ni snežne napovedi');
+
+  // Poldnevna snežna meja po dnevih
+  const freezeByDay = new Map();
+  if (hourly?.time?.length) {
+    for (let i = 0; i < hourly.time.length; i++) {
+      const key = hourly.time[i].slice(0, 10);
+      const hour = Number(hourly.time[i].slice(11, 13));
+      const height = hourly.freezinglevel_height?.[i] ?? null;
+      if (height == null) continue;
+      let d = freezeByDay.get(key);
+      if (!d) {
+        d = { height: null, noonDist: Infinity };
+        freezeByDay.set(key, d);
+      }
+      const dist = Math.abs(hour - 12);
+      if (dist < d.noonDist) {
+        d.noonDist = dist;
+        d.height = height;
+      }
+    }
+  }
+
+  const days = daily.time.map((t, i) => {
+    const snow = daily.snowfall_sum?.[i] ?? 0;
+    const rain = daily.precipitation_sum?.[i] ?? 0;
+    const min = daily.temperature_2m_min?.[i] ?? null;
+    const max = daily.temperature_2m_max?.[i] ?? null;
+    const freeze = freezeByDay.get(t)?.height ?? null;
+    let kind = 'dry';
+    if (snow >= 0.5) kind = 'snow';
+    else if (rain >= 1 && ((min != null && min <= 1.5) || (freeze != null && freeze <= STATION_ELEV_M + 200))) {
+      kind = 'mix';
+    } else if (rain >= 0.5) kind = 'rain';
+    return {
+      date: new Date(`${t}T12:00:00`),
+      code: daily.weather_code?.[i] ?? null,
+      max,
+      min,
+      rain,
+      snow,
+      rainProb: daily.precipitation_probability_max?.[i] ?? null,
+      freeze,
+      kind,
+      atStation: snow >= 0.5 || (kind === 'mix' && freeze != null && freeze <= STATION_ELEV_M + 100),
+    };
+  });
+
+  const now = Date.now();
+  const next48 = [];
+  if (hourly?.time?.length) {
+    for (let i = 0; i < hourly.time.length; i++) {
+      const time = new Date(hourly.time[i]);
+      if (time.getTime() < now - 3600_000) continue;
+      if (next48.length >= 48) break;
+      next48.push({
+        time,
+        snow: hourly.snowfall?.[i] ?? 0,
+        precip: hourly.precipitation?.[i] ?? 0,
+        temp: hourly.temperature_2m?.[i] ?? null,
+        code: hourly.weather_code?.[i] ?? null,
+        freeze: hourly.freezinglevel_height?.[i] ?? null,
+      });
+    }
+  }
+
+  const snowDays = days.filter((d) => d.snow >= 0.5);
+  const totalSnow = days.reduce((s, d) => s + (d.snow || 0), 0);
+  const nextSnow = snowDays[0] ?? days.find((d) => d.kind === 'mix') ?? null;
+
+  return {
+    days,
+    next48,
+    totalSnow,
+    nextSnow,
+    stationElev: STATION_ELEV_M,
+  };
 }
 
 /** Včerajšnja napoved modelov (previous runs) za primerjavo s postajo */

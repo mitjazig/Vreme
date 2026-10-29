@@ -6,10 +6,15 @@ import { getDayFacts } from './fun-facts.js';
 import { setupInstallUI } from './install-ui.js';
 import { initPwaUpdates } from './pwa-update.js';
 import { initContrast } from './contrast.js';
-import { loadWeatherBundle, fetchDayReadings } from './sheets.js';
-import { renderHourlyChart, renderDailyChart, renderPrecipChart24h } from './charts.js';
+import { loadWeatherBundle, fetchDayReadings, fetchMonthReadings } from './sheets.js';
+import { renderHourlyChart, renderDailyChart, renderPrecipChart24h, renderLiveChart } from './charts.js';
 import { calcBoraJugo } from './bora.js';
 import { fetchYesterdayModels } from './forecast.js';
+import { fetchMushroomIndex } from './mushrooms.js';
+import { fetchPwsTodayLive, decimateReadings } from './pws.js';
+import { buildDayBrief } from './brief.js';
+import { getFolkSaying, getOnThisDayNote } from './folk.js';
+import { fetchOnThisDay, kindLabel } from './onthisday.js';
 
 import {
   windLabel,
@@ -411,6 +416,93 @@ function renderBbqHome(latest) {
     ${warnings.length ? `<div class="bbq-warnings">${warnings.map(w => `<span class="bbq-warning">${w}</span>`).join('')}</div>` : ''}`;
 }
 
+function renderBrief(latest, summary, readings) {
+  const el = document.getElementById('brief-content');
+  const sub = document.getElementById('brief-sub');
+  if (!el) return;
+  const bora = calcBoraJugo(latest);
+  const brief = buildDayBrief({ latest, summary, readings, bora });
+  if (sub) {
+    sub.textContent = new Date().toLocaleDateString('sl-SI', {
+      weekday: 'long', day: 'numeric', month: 'long',
+    });
+  }
+  el.innerHTML = `
+    <ol class="brief-list">
+      ${brief.lines.map((line) => `<li>${line}</li>`).join('')}
+    </ol>
+    <p class="tide-note">${brief.meta}</p>`;
+}
+
+async function renderLiveWuChart() {
+  const canvas = document.getElementById('chart-live');
+  const empty = document.getElementById('live-chart-empty');
+  const sub = document.getElementById('live-chart-sub');
+  if (!canvas) return;
+  try {
+    const live = await fetchPwsTodayLive();
+    const pts = decimateReadings(live, 140);
+    if (!pts.length) {
+      empty?.classList.remove('hidden');
+      if (sub) sub.textContent = 'Hitre meritve niso na voljo';
+      return;
+    }
+    empty?.classList.add('hidden');
+    if (sub) {
+      sub.textContent = `${live.length} točk danes · prikaz ${pts.length} · T in sunki`;
+    }
+    renderLiveChart(canvas, pts, formatTime);
+  } catch (err) {
+    console.warn('WU live graf:', err);
+    empty?.classList.remove('hidden');
+    if (sub) sub.textContent = 'Live graf ni na voljo';
+  }
+}
+
+async function renderMushrooms() {
+  const el = document.getElementById('mushroom-content');
+  const sub = document.getElementById('mushroom-sub');
+  if (!el) return;
+  try {
+    const m = await fetchMushroomIndex();
+    if (!m) {
+      el.innerHTML = '<p class="forecast-loading">Indeks ni na voljo.</p>';
+      return;
+    }
+    const pct = (m.score / 10) * 100;
+    const sinceStr = m.daysSinceRain != null
+      ? (m.daysSinceRain === 0 ? 'danes' : `pred ${m.daysSinceRain} ${m.daysSinceRain === 1 ? 'dnevom' : 'dnevi'}`)
+      : 'ni večjega dežja';
+    if (sub) {
+      sub.textContent = `7d ${m.moist.rain7.toFixed(0)} mm · 14d ${m.moist.rain14.toFixed(0)} mm · T ${m.temp.avg != null ? m.temp.avg.toFixed(0) + '°' : '—'}`;
+    }
+    el.innerHTML = `
+      <div class="bbq-hero">
+        <span class="bbq-hero__emoji">${m.level.emoji}</span>
+        <div class="bbq-hero__info">
+          <span class="bbq-hero__score" style="color:${m.level.color}">${m.score.toFixed(1)}<span class="bbq-hero__of">/10</span></span>
+          <span class="bbq-hero__label">${m.level.label}</span>
+        </div>
+      </div>
+      <div class="bbq-bar-wrap">
+        <div class="bbq-bar">
+          <div class="bbq-bar__fill" style="width:${pct.toFixed(0)}%;background:${m.level.color}"></div>
+        </div>
+      </div>
+      <p class="mushroom-tip">${m.tip}</p>
+      <div class="mushroom-meta">
+        <span>Dež ≥5 mm: ${sinceStr}</span>
+        <span>Sezona ×${m.seasonW.toFixed(2)}</span>
+      </div>
+      ${m.species.length
+        ? `<div class="bbq-warnings">${m.species.map((s) => `<span class="bbq-warning">🍄 ${s}</span>`).join('')}</div>`
+        : ''}
+      <p class="tide-note">${m.source} · heuristika, ne uradna napoved</p>`;
+  } catch (err) {
+    el.innerHTML = `<p class="forecast-loading">Gobji indeks ni na voljo (${err.message}).</p>`;
+  }
+}
+
 /** Hitri pregled – kompaktni čipi */
 function renderGlance(latest, readings) {
   const el = $('#glance');
@@ -524,6 +616,59 @@ async function renderSkill(readings) {
   } catch (err) {
     el.innerHTML = `<p class="forecast-loading">Primerjava ni na voljo (${err.message}).</p>`;
   }
+}
+
+/** —— Na današnji dan (zgodovina) —— */
+async function renderOnThisDay() {
+  const el = document.getElementById('othis-content');
+  const sub = document.getElementById('othis-sub');
+  if (!el) return;
+  const now = new Date();
+  if (sub) {
+    sub.textContent = now.toLocaleDateString('sl-SI', { day: 'numeric', month: 'long' });
+  }
+  try {
+    const data = await fetchOnThisDay(now);
+    if (!data.items?.length) {
+      el.innerHTML = '<p class="forecast-loading">Ni dogodkov za ta dan.</p>';
+      return;
+    }
+    el.innerHTML = `
+      <ul class="othis-list">
+        ${data.items.map((it) => {
+          const year = it.year != null ? String(it.year) : '—';
+          const body = it.url
+            ? `<a href="${it.url}" target="_blank" rel="noopener">${it.text}</a>`
+            : it.text;
+          return `<li class="othis-item othis-item--${it.kind}">
+            <span class="othis-item__year">${year}</span>
+            <div class="othis-item__body">
+              <span class="othis-item__kind">${kindLabel(it.kind)}</span>
+              <p class="othis-item__text">${body}</p>
+            </div>
+          </li>`;
+        }).join('')}
+      </ul>
+      <p class="tide-note">${data.source}</p>`;
+  } catch (err) {
+    el.innerHTML = `<p class="forecast-loading">Zgodovina ni na voljo (${err.message}).</p>`;
+  }
+}
+
+/** —— Ljudski rek —— */
+function renderFolkSaying() {
+  const el = document.getElementById('folk-content');
+  const sub = document.getElementById('folk-sub');
+  if (!el) return;
+  const now = new Date();
+  const s = getFolkSaying(now);
+  const dateLabel = now.toLocaleDateString('sl-SI', { day: 'numeric', month: 'long' });
+  if (sub) {
+    sub.textContent = s.name ? `${s.name} · ${dateLabel}` : dateLabel;
+  }
+  el.innerHTML = `
+    <blockquote class="folk-quote">„${s.text}“</blockquote>
+    <p class="tide-note">${s.label} · ljudsko izročilo</p>`;
 }
 
 /** —— Zanimivost dneva —— */
@@ -661,12 +806,33 @@ async function renderDayHistory() {
   const recRain = rainEntries.length ? Math.max(...rainEntries.map((e) => e.rain)) : null;
 
   const dateLabel = now.toLocaleDateString('sl-SI', { day: 'numeric', month: 'long' });
+  const maxs = entries.map((e) => e.max).filter((v) => v != null);
+  const mins = entries.map((e) => e.min).filter((v) => v != null);
+  const avgs = entries.map((e) => e.avg).filter((v) => v != null);
+  const rainyYears = entries.filter((e) => e.rain > 0.1).length;
+  const avgMax = maxs.length ? maxs.reduce((a, b) => a + b, 0) / maxs.length : null;
+  const avgMin = mins.length ? mins.reduce((a, b) => a + b, 0) / mins.length : null;
+  const avgAvg = avgs.length ? avgs.reduce((a, b) => a + b, 0) / avgs.length : null;
+  const histNote = getOnThisDayNote(now);
+  const windiest = entries
+    .filter((e) => e.wind != null)
+    .sort((a, b) => b.wind - a.wind)[0];
 
   el.innerHTML = `
     <div class="dh-header">
       <span class="dh-header__icon">📅</span>
       <span class="dh-header__title">Ta dan v preteklosti</span>
       <span class="dh-header__date">${dateLabel}</span>
+    </div>
+    ${histNote ? `<p class="dh-history-note">${histNote}</p>` : ''}
+    <div class="dh-stats">
+      <span>Povp. max <strong>${avgMax != null ? avgMax.toFixed(1) + '°' : '—'}</strong></span>
+      <span>Povp. min <strong>${avgMin != null ? avgMin.toFixed(1) + '°' : '—'}</strong></span>
+      <span>Povp. <strong>${avgAvg != null ? avgAvg.toFixed(1) + '°' : '—'}</strong></span>
+      <span>Dež <strong>${rainyYears}/${entries.length}</strong> let</span>
+      ${recMax != null ? `<span>Rek. max <strong class="dh-stat--hot">${recMax.toFixed(1)}°</strong></span>` : ''}
+      ${recMin != null ? `<span>Rek. min <strong class="dh-stat--cold">${recMin.toFixed(1)}°</strong></span>` : ''}
+      ${windiest ? `<span>Max sunki <strong>${windiest.wind.toFixed(1)} m/s</strong> (${windiest.year})</span>` : ''}
     </div>
     <div class="dh-scroll">
       ${entries.map((e) => {
@@ -737,59 +903,59 @@ function renderAgro() {
     </div>`;
 }
 
-/** —— Tekoči mesec povzetek —— */
-function renderMonthSummary(readings) {
+/** —— Tekoči mesec povzetek (Sheets – cel mesec; PWS ima le ~7 dni) —— */
+async function renderMonthSummary() {
   const el = document.getElementById('month-summary');
   if (!el) return;
 
   const now = new Date();
-  const curMonth = now.getMonth();
+  const curMonth = now.getMonth() + 1; // 1–12
   const curYear  = now.getFullYear();
-
-  const monthReadings = readings.filter((r) => {
-    if (!r.time || r.temp == null) return false;
-    return r.time.getMonth() === curMonth && r.time.getFullYear() === curYear;
-  });
-
-  if (!monthReadings.length) { el.hidden = true; return; }
-
-  const temps = monthReadings.map((r) => r.temp).filter((t) => t != null);
-  const minT  = Math.min(...temps);
-  const maxT  = Math.max(...temps);
-  const avgT  = temps.reduce((s, t) => s + t, 0) / temps.length;
-
-  // Skupne padavine — zadnja vrednost precipTotal za vsak dan
-  const dayTotals = {};
-  monthReadings.forEach((r) => {
-    if (r.precipTotal == null) return;
-    const d = r.time.toDateString();
-    dayTotals[d] = r.precipTotal;
-  });
-  const totalRain = Object.values(dayTotals).reduce((s, v) => s + v, 0);
-
   const monthName = now.toLocaleDateString('sl-SI', { month: 'long' });
 
-  el.hidden = false;
-  el.innerHTML = `
-    <div class="ms-head">${monthName} ${curYear}</div>
-    <div class="ms-grid">
-      <div class="ms-item">
-        <span class="ms-lbl">Min</span>
-        <span class="ms-val ms-val--cold">${minT.toFixed(1)}°</span>
-      </div>
-      <div class="ms-item">
-        <span class="ms-lbl">Povp.</span>
-        <span class="ms-val">${avgT.toFixed(1)}°</span>
-      </div>
-      <div class="ms-item">
-        <span class="ms-lbl">Max</span>
-        <span class="ms-val ms-val--hot">${maxT.toFixed(1)}°</span>
-      </div>
-      <div class="ms-item">
-        <span class="ms-lbl">Padavine</span>
-        <span class="ms-val ms-val--rain">${totalRain.toFixed(1)} mm</span>
-      </div>
-    </div>`;
+  try {
+    const { readings: monthReadings } = await fetchMonthReadings(curYear, curMonth);
+    const temps = monthReadings.map((r) => r.temp).filter((t) => t != null);
+    if (!temps.length) { el.hidden = true; return; }
+
+    const minT = Math.min(...temps);
+    const maxT = Math.max(...temps);
+    const avgT = temps.reduce((s, t) => s + t, 0) / temps.length;
+
+    // Skupne padavine — zadnja dnevna precipTotal (WU/Sheets daily rain)
+    const dayTotals = {};
+    monthReadings.forEach((r) => {
+      if (r.precipTotal == null || !r.time) return;
+      const d = r.time.toLocaleDateString('sv-SE', { timeZone: 'Europe/Ljubljana' });
+      dayTotals[d] = r.precipTotal;
+    });
+    const totalRain = Object.values(dayTotals).reduce((s, v) => s + v, 0);
+
+    el.hidden = false;
+    el.innerHTML = `
+      <div class="ms-head">${monthName} ${curYear}</div>
+      <div class="ms-grid">
+        <div class="ms-item">
+          <span class="ms-lbl">Min</span>
+          <span class="ms-val ms-val--cold">${minT.toFixed(1)}°</span>
+        </div>
+        <div class="ms-item">
+          <span class="ms-lbl">Povp.</span>
+          <span class="ms-val">${avgT.toFixed(1)}°</span>
+        </div>
+        <div class="ms-item">
+          <span class="ms-lbl">Max</span>
+          <span class="ms-val ms-val--hot">${maxT.toFixed(1)}°</span>
+        </div>
+        <div class="ms-item">
+          <span class="ms-lbl">Padavine</span>
+          <span class="ms-val ms-val--rain">${totalRain.toFixed(1)} mm</span>
+        </div>
+      </div>`;
+  } catch (err) {
+    console.warn('Mesečni povzetek:', err);
+    el.hidden = true;
+  }
 }
 
 function renderCharts(readings) {
@@ -807,19 +973,24 @@ function renderCharts(readings) {
 }
 
 function renderAll(bundle, fromCache = false) {
-  const { readings, latest, summary, fetchedAt } = bundle;
+  const { readings, latest, summary, fetchedAt, source } = bundle;
 
   renderHero(latest, summary, readings);
   renderGlance(latest, readings);
   renderMetrics(latest, readings);
-  renderMonthSummary(readings);
+  renderBrief(latest, summary, readings);
+  renderFolkSaying();
+  renderOnThisDay();
+  renderMonthSummary();
   renderAgro();
   renderBora(latest);
   renderBbqHome(latest);
+  renderMushrooms();
   renderSkill(readings);
   renderSunStrip();
   renderDayFact(latest);
   renderAnomaly(readings);
+  renderLiveWuChart();
 
   let chartError = null;
   try {
@@ -835,9 +1006,10 @@ function renderAll(bundle, fromCache = false) {
     second: '2-digit',
   }) : '—';
 
+  const srcTag = source === 'pws' ? ' · WU live' : source === 'sheets' ? ' · Sheets' : '';
   let msg = fromCache
     ? `Offline – zadnji podatki (${when})`
-    : `Posodobljeno ${when}`;
+    : `Posodobljeno ${when}${srcTag}`;
   if (chartError) msg += ' · grafi niso na voljo';
   setStatus(msg, fromCache || !!chartError);
 }
@@ -945,6 +1117,16 @@ async function init() {
       tapTimer = setTimeout(() => { tapCount = 0; }, 1500);
     });
     logoEl.style.userSelect = 'none';
+  }
+
+  // Počakaj SW (PWS proxy ./api/pws/…)
+  if ('serviceWorker' in navigator) {
+    try {
+      await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((r) => setTimeout(r, 4000)),
+      ]);
+    } catch { /* ignore */ }
   }
 
   const cached = loadCache();

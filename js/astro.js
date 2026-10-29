@@ -6,8 +6,8 @@
  * Lunine faze: sinodični period s kalibriranim referenčnim datumom
  */
 
-export const STATION_LAT = 45.4837;  // Rakitovec °N
-export const STATION_LON = 13.8806;  // Rakitovec °E
+export const STATION_LAT = 45.469639;  // IKOPER43 °N (WU)
+export const STATION_LON = 13.971358;  // IKOPER43 °E (WU)
 
 const DEG = Math.PI / 180;
 const RAD = 180 / Math.PI;

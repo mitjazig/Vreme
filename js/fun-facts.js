@@ -20,7 +20,7 @@ const TRIVIA = [
   'Tržaški zaliv je eden redkih predelov Mediterana, kjer morje pozimi delno zmrzne — zadnjič resneje leta 2012.',
   'Jugo (scirocco) prinaša topel vlažen zrak iz Sahare. Včasih prinese s seboj saharskipesek, ki obarva dež rjavo.',
   'Koper dobi povprečno ~2300 ur sonca letno — več kot Milano (1900 h) ali Barcelona (2500 h). Med najbolj sončnimi mesti v Sloveniji.',
-  'Temperatura pada za ~6,5°C na vsakih 1000 m višine. Rakitovec leži na ~380 m — to pomeni, da je tu povprečno ~2,5°C hladnejše kot ob morju.',
+  'Temperatura pada za ~6,5°C na vsakih 1000 m višine. Rakitovec leži na ~500 m — to pomeni, da je tu povprečno ~3°C hladnejše kot ob morju.',
   'Megla v koprski kotlini ob jasnem jutru na Krasu ni slabo vreme — pomeni temperaturno inverzijo. Na Krasu je takrat toplejše kot spodaj.',
   'Povprečna letna količina padavin na Krasu je 1200–1500 mm — večino pade jeseni in spomladi, poleti je relativno suho.',
   'Strela je 5× bolj vroča od površine Sonca: doseže ~30.000°C. Kanal strele je širok le 2–3 cm.',
@@ -214,16 +214,12 @@ export function getDayFacts(latest = null) {
   const now     = new Date();
   const dayOfYr = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86_400_000);
 
-  // Na pravi datum pokaži pregovor kot primarno
-  const proverb = todayProverb();
+  // Pregovori so v kartici »Ljudski rek« (folk.js) — tukaj trivia + meritev/astro
   const trivia  = TRIVIA[dayOfYr % TRIVIA.length];
-  const primary = proverb ?? trivia;
-
-  // Astronomsko ali dinamično dejstvo za sekundarno
-  const astro    = astronomicalFact();
-  const dynamic  = dynamicFacts(latest);
-  // Če je danes pregovor, dodaj še trivia kot sekundarno
-  const secondary = proverb ? trivia : (astro ?? dynamic[0] ?? null);
+  const astro   = astronomicalFact();
+  const dynamic = dynamicFacts(latest);
+  const primary = trivia;
+  const secondary = astro ?? dynamic[0] ?? todayProverb();
 
   return { primary, secondary };
 }
