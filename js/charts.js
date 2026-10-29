@@ -3,6 +3,67 @@ import { CHART, baseChartOptions } from './chart-theme.js';
 let hourlyChart;
 let dailyChart;
 let precipChart;
+let liveChart;
+
+/** Gost graf WU live točk (temp + sunki) */
+export function renderLiveChart(canvas, readings, formatTime) {
+  if (!canvas || typeof Chart === 'undefined') return;
+  if (!readings?.length) {
+    if (liveChart) { liveChart.destroy(); liveChart = null; }
+    return;
+  }
+
+  const labels = readings.map((r) =>
+    formatTime(r.time, { hour: '2-digit', minute: '2-digit' }),
+  );
+
+  if (liveChart) liveChart.destroy();
+
+  liveChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Temperatura °C',
+          data: readings.map((r) => r.temp),
+          borderColor: CHART.temp,
+          backgroundColor: CHART.tempFill,
+          fill: true,
+          tension: 0.25,
+          pointRadius: 0,
+          borderWidth: 2,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Sunki km/h',
+          data: readings.map((r) => (r.windGust != null ? r.windGust * 3.6 : null)),
+          borderColor: 'rgba(56, 189, 248, 0.9)',
+          backgroundColor: 'rgba(56, 189, 248, 0.12)',
+          fill: false,
+          tension: 0.25,
+          pointRadius: 0,
+          borderWidth: 1.5,
+          yAxisID: 'y1',
+        },
+      ],
+    },
+    options: baseChartOptions({
+      scales: {
+        y: {
+          position: 'left',
+          title: { display: true, text: '°C', color: CHART.text },
+        },
+        y1: {
+          position: 'right',
+          beginAtZero: true,
+          grid: { drawOnChartArea: false },
+          title: { display: true, text: 'km/h', color: CHART.text },
+        },
+      },
+    }),
+  });
+}
 
 export function renderHourlyChart(canvas, readings, formatTime) {
   if (!canvas || typeof Chart === 'undefined') return;

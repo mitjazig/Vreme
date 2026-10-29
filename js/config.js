@@ -1,5 +1,12 @@
 /** Povečaj ob večjih popravkih – počisti star predpomnilnik v brskalniku */
-export const APP_VERSION = '1.7.0';
+export const APP_VERSION = '1.7.8';
+
+/** Weather Underground PWS (ključ gre tudi v sw.js za proxy) */
+export const PWS = {
+  stationId: 'IKOPER43',
+  /** Live meritev; zgodovina še vedno lahko iz Sheets */
+  preferLive: true,
+};
 
 /** Google Sheets – javno dostopen list (Kdorkoli s povezavo / objavljen na spletu). */
 export const SHEET = {
