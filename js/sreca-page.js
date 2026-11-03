@@ -1,14 +1,18 @@
 import { fetchMultiLocation, wmoIcon } from './forecast.js';
 import { initPwaUpdates } from './pwa-update.js';
 import { initContrast } from './contrast.js';
+import { getFavourites, toggleFavourite, isFavourite, lokacijaUrl } from './places-store.js';
+import './site-nav.js';
 
 const GROUPS = {
   slo: [
+    { name: 'Koper',        emoji: '⚓', lat: 45.5469, lon: 13.7302 },
     { name: 'Ljubljana',    emoji: '🏛️', lat: 46.0569, lon: 14.5058 },
     { name: 'Maribor',     emoji: '🍇', lat: 46.5547, lon: 15.6459 },
     { name: 'Bled',        emoji: '🏔️', lat: 46.3639, lon: 14.1094 },
     { name: 'Portorož',    emoji: '🏖️', lat: 45.5133, lon: 13.5928 },
     { name: 'Kranjska Gora', emoji: '⛷️', lat: 46.5108, lon: 13.8454 },
+    { name: 'Bovec',       emoji: '🏞️', lat: 46.3376, lon: 13.5526 },
     { name: 'Celje',       emoji: '🏰', lat: 46.2310, lon: 15.2677 },
     { name: 'Novo Mesto',  emoji: '🌿', lat: 45.8044, lon: 15.1700 },
     { name: 'Triglav',     emoji: '⛰️', lat: 46.3786, lon: 13.8364 },
@@ -27,6 +31,7 @@ const GROUPS = {
     { name: 'Dunaj',       emoji: '🇦🇹', lat: 48.2082, lon: 16.3738 },
     { name: 'Rim',         emoji: '🇮🇹', lat: 41.9028, lon: 12.4964 },
     { name: 'Benetke',     emoji: '🚣', lat: 45.4408, lon: 12.3155 },
+    { name: 'Cortina',     emoji: '🏔️', lat: 46.5396, lon: 12.1357 },
     { name: 'Barcelona',   emoji: '🇪🇸', lat: 41.3851, lon: 2.1734  },
     { name: 'Pariz',       emoji: '🇫🇷', lat: 48.8566, lon: 2.3522  },
     { name: 'London',      emoji: '🇬🇧', lat: 51.5074, lon: -0.1278 },
@@ -55,6 +60,27 @@ function tempColor(t) {
   return '#818cf8';
 }
 
+function renderFavBar() {
+  const el = document.getElementById('kraji-favs');
+  if (!el) return;
+  const favs = getFavourites();
+  if (!favs.length) {
+    el.hidden = true;
+    el.innerHTML = '';
+    return;
+  }
+  el.hidden = false;
+  el.innerHTML = `
+    <h2 class="loc-mine__title">Moji kraji</h2>
+    <div class="loc-chip-row">
+      ${favs.map((p) => `
+        <a class="loc-chip" href="${lokacijaUrl(p)}">
+          <span class="loc-chip__star" aria-hidden="true">★</span>
+          <span class="loc-chip__name">${p.name}</span>
+        </a>`).join('')}
+    </div>`;
+}
+
 function renderGrid(elId, locations) {
   const el = document.getElementById(elId);
   if (!el) return;
@@ -65,20 +91,51 @@ function renderGrid(elId, locations) {
     const icon = wmoIcon(loc.code);
     const color = tempColor(loc.temp);
     const rain = loc.rain > 0.5 ? `<span class="kraj-rain">🌧 ${loc.rain.toFixed(0)} mm</span>` : '';
-    return `<div class="kraj-tile">
-      <div class="kraj-tile__top">
-        <span class="kraj-tile__emoji">${loc.emoji}</span>
-        <span class="kraj-tile__name">${loc.name}</span>
-        <span class="kraj-tile__icon">${icon}</span>
-      </div>
-      <div class="kraj-tile__temp" style="color:${color}">${temp}</div>
-      <div class="kraj-tile__range">${maxT} ${minT} ${rain}</div>
-    </div>`;
+    const href = lokacijaUrl(loc);
+    const favOn = isFavourite(loc);
+    return `<article class="kraj-tile">
+      <a class="kraj-tile__link" href="${href}" aria-label="Napoved za ${loc.name}">
+        <div class="kraj-tile__top">
+          <span class="kraj-tile__emoji" aria-hidden="true">${loc.emoji}</span>
+          <span class="kraj-tile__name">${loc.name}</span>
+          <span class="kraj-tile__icon" aria-hidden="true">${icon}</span>
+        </div>
+        <div class="kraj-tile__temp" style="color:${color}">${temp}</div>
+        <div class="kraj-tile__range">${maxT} ${minT} ${rain}</div>
+      </a>
+      <button type="button" class="kraj-tile__fav ${favOn ? 'is-on' : ''}"
+        data-lat="${loc.lat}" data-lon="${loc.lon}" data-name="${loc.name.replace(/"/g, '&quot;')}"
+        aria-pressed="${favOn ? 'true' : 'false'}"
+        aria-label="${favOn ? 'Odstrani' : 'Dodaj'} ${loc.name} med priljubljene"
+        title="Priljubljeni">${favOn ? '★' : '☆'}</button>
+    </article>`;
   }).join('');
+
+  el.querySelectorAll('.kraj-tile__fav').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleFavourite({
+        lat: parseFloat(btn.dataset.lat),
+        lon: parseFloat(btn.dataset.lon),
+        name: btn.dataset.name,
+      });
+      const on = isFavourite({
+        lat: parseFloat(btn.dataset.lat),
+        lon: parseFloat(btn.dataset.lon),
+        name: btn.dataset.name,
+      });
+      btn.classList.toggle('is-on', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.textContent = on ? '★' : '☆';
+      renderFavBar();
+    });
+  });
 }
 
 async function load() {
   setStatus('Nalagam…');
+  renderFavBar();
   try {
     const [slo, hrv, eu] = await Promise.all([
       fetchMultiLocation(GROUPS.slo),
@@ -90,7 +147,8 @@ async function load() {
     renderGrid('grid-eu', eu);
     setStatus(`Posodobljeno ${new Date().toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })}`);
   } catch (err) {
-    setStatus(`Napaka: ${err.message}`, true);
+    setStatus('Napoved trenutno ni dosegljiva.', true);
+    console.warn(err);
   }
 }
 
