@@ -1,9 +1,15 @@
 import { fetchLocationForecast, reverseGeocode, wmoIcon, wmoLabel } from './forecast.js';
 import { initContrast } from './contrast.js';
 import { initPwaUpdates } from './pwa-update.js';
+import {
+  getFavourites, getRecent, pushRecent, toggleFavourite, isFavourite,
+  clearRecent, removeFavourite, removeRecent,
+} from './places-store.js';
+import './site-nav.js';
 
 const $ = (id) => document.getElementById(id);
 const STORAGE_KEY = 'lokacija_last';
+let currentPlace = null;
 
 const DAY_SL  = ['ned', 'pon', 'tor', 'sre', 'čet', 'pet', 'sob'];
 
@@ -434,6 +440,7 @@ async function loadForecast(lat, lon, nameHint = null) {
     ]);
 
     const name = geoName ?? `${lat.toFixed(3)}°N, ${lon.toFixed(3)}°E`;
+    currentPlace = { lat, lon, name };
     $('loc-station').textContent = name;
     $('loc-title').textContent = 'Napoved';
     document.title = `${name} – Vreme`;
@@ -445,13 +452,87 @@ async function loadForecast(lat, lon, nameHint = null) {
     renderDaily(data.daily);
     renderHourly(data.hourly);
     showForecast();
+    updateFavButton();
     setStatus(`Posodobljeno ${new Date().toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })}`);
 
-    // Shrani lokacijo za naslednji obisk
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ lat, lon, name }));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ lat, lon, name }));
+    } catch { /* localStorage ni na voljo */ }
+    pushRecent({ lat, lon, name });
+    renderMine();
   } catch (err) {
-    setStatus(`Napaka: ${err.message}`, true);
+    setStatus('Napoved trenutno ni dosegljiva.', true);
+    console.warn(err);
   }
+}
+
+function updateFavButton() {
+  const btn = $('btn-fav-toggle');
+  if (!btn || !currentPlace) return;
+  const on = isFavourite(currentPlace);
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.textContent = on ? '★' : '☆';
+  btn.title = on ? 'Odstrani iz priljubljenih' : 'Dodaj med priljubljene';
+  btn.setAttribute('aria-label', btn.title);
+  btn.classList.toggle('fav-toggle--on', on);
+}
+
+function renderMine() {
+  const wrap = $('loc-mine');
+  const favEl = $('loc-favs');
+  const recentEl = $('loc-recent');
+  const recentWrap = $('loc-recent-wrap');
+  if (!wrap || !favEl) return;
+
+  const favs = getFavourites();
+  const recent = getRecent();
+  const hasAny = favs.length || recent.length;
+  wrap.hidden = !hasAny;
+
+  favEl.innerHTML = favs.length
+    ? favs.map((p) => `
+      <button type="button" class="loc-chip" role="listitem" data-lat="${p.lat}" data-lon="${p.lon}" data-name="${p.name.replace(/"/g, '&quot;')}">
+        <span class="loc-chip__star" aria-hidden="true">★</span>
+        <span class="loc-chip__name">${p.name}</span>
+        <span class="loc-chip__remove" data-remove-fav title="Odstrani" aria-label="Odstrani ${p.name}">×</span>
+      </button>`).join('')
+    : '<p class="loc-mine__empty">Še nimate priljubljenih krajev. Odprite napoved in pritisnite ★.</p>';
+
+  if (recentWrap && recentEl) {
+    recentWrap.hidden = !recent.length;
+    recentEl.innerHTML = recent.map((p) => `
+      <button type="button" class="loc-chip loc-chip--recent" role="listitem" data-lat="${p.lat}" data-lon="${p.lon}" data-name="${p.name.replace(/"/g, '&quot;')}">
+        <span class="loc-chip__name">${p.name}</span>
+        <span class="loc-chip__remove" data-remove-recent title="Odstrani" aria-label="Odstrani ${p.name}">×</span>
+      </button>`).join('');
+  }
+
+  wrap.querySelectorAll('.loc-chip').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      if (e.target.closest('[data-remove-fav]')) {
+        e.stopPropagation();
+        removeFavourite({
+          lat: parseFloat(btn.dataset.lat),
+          lon: parseFloat(btn.dataset.lon),
+          name: btn.dataset.name,
+        });
+        renderMine();
+        updateFavButton();
+        return;
+      }
+      if (e.target.closest('[data-remove-recent]')) {
+        e.stopPropagation();
+        removeRecent({
+          lat: parseFloat(btn.dataset.lat),
+          lon: parseFloat(btn.dataset.lon),
+          name: btn.dataset.name,
+        });
+        renderMine();
+        return;
+      }
+      loadForecast(parseFloat(btn.dataset.lat), parseFloat(btn.dataset.lon), btn.dataset.name);
+    });
+  });
 }
 
 async function geolocate() {
@@ -477,21 +558,37 @@ async function geolocate() {
 function init() {
   initPwaUpdates();
   initContrast();
+  renderMine();
 
-  // Gumb za geolokacijo (v loc-empty in topbar)
   $('btn-geolocate')?.addEventListener('click', geolocate);
   $('btn-geolocate-top')?.addEventListener('click', geolocate);
 
-  // Gumb za osvežitev
-  $('btn-refresh-loc')?.addEventListener('click', () => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const { lat, lon, name } = JSON.parse(saved);
-      loadForecast(lat, lon, name);
-    }
+  $('btn-fav-toggle')?.addEventListener('click', () => {
+    if (!currentPlace) return;
+    toggleFavourite(currentPlace);
+    updateFavButton();
+    renderMine();
   });
 
-  // Iskanje kraja
+  $('btn-clear-recent')?.addEventListener('click', () => {
+    clearRecent();
+    renderMine();
+  });
+
+  $('btn-refresh-loc')?.addEventListener('click', () => {
+    if (currentPlace) {
+      loadForecast(currentPlace.lat, currentPlace.lon, currentPlace.name);
+      return;
+    }
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const { lat, lon, name } = JSON.parse(saved);
+        loadForecast(lat, lon, name);
+      }
+    } catch { /* ignore */ }
+  });
+
   const searchInput = $('loc-search-input');
   const searchBtn   = $('btn-loc-search');
   const resultsEl   = $('loc-search-results');
@@ -507,8 +604,9 @@ function init() {
       setStatus('');
       renderSearchResults(results);
     } catch (err) {
-      setStatus(`Napaka iskanja: ${err.message}`, true);
+      setStatus('Ni rezultatov za iskano lokacijo.', true);
       renderSearchResults([]);
+      console.warn(err);
     } finally {
       searchBtn.disabled = false;
       searchBtn.textContent = 'Išči';
@@ -518,7 +616,6 @@ function init() {
   searchBtn?.addEventListener('click', doSearch);
   searchInput?.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 
-  // Autocomplete med tipkanjem (debounce 350ms)
   let debounceTimer = null;
   searchInput?.addEventListener('input', () => {
     clearTimeout(debounceTimer);
@@ -527,29 +624,32 @@ function init() {
     debounceTimer = setTimeout(doSearch, 350);
   });
 
-  // Zapri rezultate ob kliku zunaj
   document.addEventListener('click', e => {
     if (!e.target.closest('.loc-search-wrap')) resultsEl?.classList.add('hidden');
   });
 
-  // Prednastavljena mesta
   document.querySelectorAll('.loc-preset').forEach(btn => {
     btn.addEventListener('click', () => {
-      const lat  = parseFloat(btn.dataset.lat);
-      const lon  = parseFloat(btn.dataset.lon);
-      const name = btn.dataset.name;
-      loadForecast(lat, lon, name);
+      loadForecast(parseFloat(btn.dataset.lat), parseFloat(btn.dataset.lon), btn.dataset.name);
     });
   });
 
-  // Poizkusi naložiti zadnjo shranjeno lokacijo
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try {
+  // URL ?lat=&lon=&name=
+  const params = new URLSearchParams(location.search);
+  const qLat = parseFloat(params.get('lat'));
+  const qLon = parseFloat(params.get('lon'));
+  if (Number.isFinite(qLat) && Number.isFinite(qLon)) {
+    loadForecast(qLat, qLon, params.get('name') || undefined);
+    return;
+  }
+
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
       const { lat, lon, name } = JSON.parse(saved);
       loadForecast(lat, lon, name);
-    } catch { /* pokvarjen localStorage */ }
-  }
+    }
+  } catch { /* pokvarjen localStorage */ }
 }
 
 init();

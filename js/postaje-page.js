@@ -1,11 +1,14 @@
 import { fetchAllArsoStations, arsoIcon } from './arso-stations.js';
 import { initPwaUpdates } from './pwa-update.js';
 import { initContrast } from './contrast.js';
+import { getStationStatus } from './station-status.js';
+import './site-nav.js';
 
 const $ = (id) => document.getElementById(id);
 
 let allStations = [];
 let currentSort = 'name';
+let filterQuery = '';
 
 function setStatus(msg, isErr = false) {
   const el = $('status');
@@ -20,7 +23,17 @@ function sortStations(stations, sort) {
   if (sort === 'temp-desc') return s.sort((a, b) => (b.temp ?? -999) - (a.temp ?? -999));
   if (sort === 'temp-asc')  return s.sort((a, b) => (a.temp ?? 999)  - (b.temp ?? 999));
   if (sort === 'wind-desc') return s.sort((a, b) => (b.windKmh ?? 0) - (a.windKmh ?? 0));
+  if (sort === 'rain-desc') return s.sort((a, b) => (b.rain ?? 0) - (a.rain ?? 0));
   return s;
+}
+
+function filterStations(stations, q) {
+  const needle = (q || '').trim().toLowerCase();
+  if (!needle) return stations;
+  return stations.filter((s) =>
+    (s.name || '').toLowerCase().includes(needle)
+    || (s.desc || '').toLowerCase().includes(needle)
+  );
 }
 
 function tempColor(t) {
@@ -36,16 +49,22 @@ function tempColor(t) {
   return '#93c5fd';
 }
 
+function freshnessDot(updated) {
+  if (!updated) return '';
+  const st = getStationStatus(updated);
+  const icon = st.level === 'fresh' ? '🟢' : st.level === 'stale' ? '🟡' : st.level === 'offline' ? '🔴' : '⚪';
+  return `<span class="st-row__fresh" title="${st.detail}">${icon}</span>`;
+}
+
 function renderList(stations) {
   const el = $('stations-list');
   if (!el) return;
 
   if (!stations.length) {
-    el.innerHTML = '<p class="stations-empty">Ni podatkov.</p>';
+    el.innerHTML = '<p class="stations-empty">Ni rezultatov za iskano lokacijo.</p>';
     return;
   }
 
-  // Poišči min/max za vizualno označitev
   const temps = stations.map(s => s.temp).filter(t => t != null);
   const maxTemp = temps.length ? Math.max(...temps) : null;
   const minTemp = temps.length ? Math.min(...temps) : null;
@@ -65,13 +84,13 @@ function renderList(stations) {
       s.desc,
       s.humidity != null ? `${s.humidity}% vlaga` : null,
       wind || null,
-      s.rain24h != null && s.rain24h > 0 ? `🌧 ${s.rain24h} mm` : null,
+      s.rain != null && s.rain > 0 ? `🌧 ${s.rain} mm` : null,
     ].filter(Boolean).join(' · ');
 
     return `<div class="st-row">
-      <span class="st-row__icon">${arsoIcon(s.icon)}</span>
+      <span class="st-row__icon" aria-hidden="true">${arsoIcon(s.icon)}</span>
       <div class="st-row__info">
-        <span class="st-row__name">${s.name}${badge}${typeBadge}</span>
+        <span class="st-row__name">${s.name}${badge}${typeBadge}${freshnessDot(s.updated)}</span>
         ${meta ? `<span class="st-row__meta">${meta}</span>` : ''}
       </div>
       <span class="st-row__temp" style="color:${color}">${tempStr}</span>
@@ -79,24 +98,28 @@ function renderList(stations) {
   }).join('');
 }
 
+function refreshView() {
+  renderList(sortStations(filterStations(allStations, filterQuery), currentSort));
+}
+
 function applySort(sort) {
   currentSort = sort;
   document.querySelectorAll('.sort-btn').forEach(btn => {
     btn.classList.toggle('sort-btn--active', btn.dataset.sort === sort);
   });
-  renderList(sortStations(allStations, sort));
+  refreshView();
 }
 
 async function load() {
   setStatus('Nalagam postaje…');
   try {
-    // Fetchaj vse postaje (brez omejitve razdalje — velik radij)
     allStations = await fetchAllArsoStations();
-    renderList(sortStations(allStations, currentSort));
+    refreshView();
     setStatus(`${allStations.length} postaj · ${new Date().toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })}`);
   } catch (err) {
-    setStatus(`Napaka: ${err.message}`, true);
-    $('stations-list').innerHTML = `<p class="stations-empty">Ni podatkov: ${err.message}</p>`;
+    setStatus('Podatek trenutno ni na voljo.', true);
+    $('stations-list').innerHTML = '<p class="stations-empty">Postaje trenutno niso dosegljive.</p>';
+    console.warn(err);
   }
 }
 
@@ -106,6 +129,16 @@ function init() {
 
   document.querySelectorAll('.sort-btn').forEach(btn => {
     btn.addEventListener('click', () => applySort(btn.dataset.sort));
+  });
+
+  const filter = $('stations-filter');
+  let t = null;
+  filter?.addEventListener('input', () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      filterQuery = filter.value;
+      refreshView();
+    }, 180);
   });
 
   $('btn-reload')?.addEventListener('click', load);

@@ -378,19 +378,19 @@ export async function fetchWarnings() {
     const lbl = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : DAY_SL[d.date.getDay()] + ' ' + d.date.getDate() + '.';
 
     if (d.code >= 95)
-      warnings.push({ icon: '⛈️', title: 'Nevihta', desc: `${lbl} · ${WMO_LABELS[d.code] ?? ''}`, level: d.code >= 99 ? 'red' : d.code >= 96 ? 'orange' : 'yellow', day: i });
+      warnings.push({ icon: '⛈️', title: 'Nevihta', desc: `${lbl} · ${WMO_LABELS[d.code] ?? ''}`, level: d.code >= 99 ? 'red' : d.code >= 96 ? 'orange' : 'yellow', day: i, href: '#sec-toca' });
 
     if (d.gust >= 70)
-      warnings.push({ icon: '💨', title: 'Sunki vetra', desc: `${lbl} · do ${Math.round(d.gust)} km/h`, level: d.gust >= 120 ? 'red' : d.gust >= 90 ? 'orange' : 'yellow', day: i });
+      warnings.push({ icon: '💨', title: 'Sunki vetra', desc: `${lbl} · do ${Math.round(d.gust)} km/h`, level: d.gust >= 120 ? 'red' : d.gust >= 90 ? 'orange' : 'yellow', day: i, href: '#sec-veter' });
 
     if (d.rain >= 30)
-      warnings.push({ icon: '🌧️', title: 'Obilne padavine', desc: `${lbl} · ${d.rain.toFixed(0)} mm`, level: d.rain >= 100 ? 'red' : d.rain >= 60 ? 'orange' : 'yellow', day: i });
+      warnings.push({ icon: '🌧️', title: 'Obilne padavine', desc: `${lbl} · ${d.rain.toFixed(0)} mm`, level: d.rain >= 100 ? 'red' : d.rain >= 60 ? 'orange' : 'yellow', day: i, href: '#sec-radar' });
 
     if (d.max != null && d.max >= 35)
-      warnings.push({ icon: '🌡️', title: 'Vročinski val', desc: `${lbl} · do ${Math.round(d.max)}°C`, level: d.max >= 40 ? 'red' : d.max >= 38 ? 'orange' : 'yellow', day: i });
+      warnings.push({ icon: '🌡️', title: 'Vročinski val', desc: `${lbl} · do ${Math.round(d.max)}°C`, level: d.max >= 40 ? 'red' : d.max >= 38 ? 'orange' : 'yellow', day: i, href: '#sec-danes' });
 
     if (d.snow >= 20)
-      warnings.push({ icon: '❄️', title: 'Obilno sneženje', desc: `${lbl} · ${d.snow.toFixed(0)} cm`, level: d.snow >= 60 ? 'red' : d.snow >= 40 ? 'orange' : 'yellow', day: i });
+      warnings.push({ icon: '❄️', title: 'Obilno sneženje', desc: `${lbl} · ${d.snow.toFixed(0)} cm`, level: d.snow >= 60 ? 'red' : d.snow >= 40 ? 'orange' : 'yellow', day: i, href: '#sec-sneg' });
   });
 
   return warnings;

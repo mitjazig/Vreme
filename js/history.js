@@ -1,6 +1,7 @@
 import { APP_VERSION } from './config.js';
 import { initPwaUpdates } from './pwa-update.js';
 import { initContrast } from './contrast.js';
+import './site-nav.js';
 import { fetchDataBounds, fetchMonthReadings, fetchYearReadings } from './sheets.js';
 import {
   aggregateByDay,

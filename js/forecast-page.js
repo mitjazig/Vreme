@@ -3,6 +3,8 @@ import { initContrast } from './contrast.js';
 import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides, fetchFireDanger, fetchLocationForecast, reverseGeocode, fetchWarnings, fetchWindyWaves, fetchWindForecast, fetchModelComparison, fetchFreezingLevel, fetchSnowForecast } from './forecast.js';
 import { moonPhase, STATION_LAT, STATION_LON } from './astro.js';
 import { initNotifications, notifyWarnings } from './notifications.js';
+import { saveWeatherContext } from './weather-context.js';
+import './site-nav.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -71,7 +73,7 @@ function renderModelComparison(data, error) {
   }).join('');
 
   el.innerHTML = `${header}${rows}
-    <p class="tide-note">Open-Meteo · ECMWF IFS · DWD ICON · NOAA GFS · WRF ni javno dostopen v brskalniku</p>`;
+    <p class="tide-note">Kaj gledati: ECMWF je pogosto najbolj zanesljiv za Evropo, ICON za kratki rok, GFS za grobo usmeritev. Razlike med modeli kažejo negotovost. · Open-Meteo</p>`;
 }
 
 function renderHourly(hours) {
@@ -961,16 +963,23 @@ function renderWarnings(warnings) {
     return;
   }
   const LEVEL_COLOR = { yellow: '#fbbf24', orange: '#f97316', red: '#f43f5e' };
-  el.innerHTML = warnings.map(w => `
+  el.innerHTML = warnings.map(w => {
+    const levelLabel = w.level === 'yellow' ? 'Rumena' : w.level === 'orange' ? 'Oranžna' : 'Rdeča';
+    const link = w.href
+      ? `<a class="warn-row__link" href="${w.href}">Podrobnosti →</a>`
+      : '';
+    return `
     <div class="warn-row warn-row--${w.level}">
-      <span class="warn-row__bar" style="background:${LEVEL_COLOR[w.level]}"></span>
-      <span class="warn-row__icon">${w.icon}</span>
+      <span class="warn-row__bar" style="background:${LEVEL_COLOR[w.level]}" aria-hidden="true"></span>
+      <span class="warn-row__icon" aria-hidden="true">${w.icon}</span>
       <div class="warn-row__body">
         <span class="warn-row__title">${w.title}</span>
         <span class="warn-row__desc">${w.desc}</span>
+        ${link}
       </div>
-      <span class="warn-row__badge warn-row__badge--${w.level}">${w.level === 'yellow' ? 'Rumena' : w.level === 'orange' ? 'Oranžna' : 'Rdeča'}</span>
-    </div>`).join('');
+      <span class="warn-row__badge warn-row__badge--${w.level}"><span class="sr-only">Resnost: </span>${levelLabel}</span>
+    </div>`;
+  }).join('');
 }
 
 async function load() {
@@ -1008,7 +1017,11 @@ async function load() {
     if (warnings.status === 'fulfilled') {
       renderWarnings(warnings.value);
       notifyWarnings(warnings.value);
-    } else renderWarnings([]);
+      saveWeatherContext({ alertCount: warnings.value?.length || 0 });
+    } else {
+      renderWarnings([]);
+      saveWeatherContext({ alertCount: 0 });
+    }
 
     if (freeze.status === 'fulfilled') renderFreeze(freeze.value);
     else renderFreeze(null, freeze.reason);

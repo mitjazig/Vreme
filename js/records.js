@@ -11,6 +11,7 @@ import { initPwaUpdates } from './pwa-update.js';
 import { initContrast } from './contrast.js';
 import { fetchYearReadings } from './sheets.js';
 import { aggregateByDay } from './weather-ui.js';
+import './site-nav.js';
 
 const $ = (sel) => document.querySelector(sel);
 

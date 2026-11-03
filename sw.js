@@ -1,4 +1,4 @@
-const CACHE = 'vreme-pwa-static-v58';
+const CACHE = 'vreme-pwa-static-v62';
 
 const PWS_STATION = 'IKOPER43';
 const PWS_API_KEY = '422e0bf8dee443c2ae0bf8dee4e3c22c';
@@ -20,6 +20,15 @@ const ASSETS = [
   './js/brief.js',
   './js/folk.js',
   './js/onthisday.js',
+  './js/weather-thresholds.js',
+  './js/station-status.js',
+  './js/weather-comfort.js',
+  './js/weather-summary.js',
+  './js/weather-comparisons.js',
+  './js/weather-events.js',
+  './js/weather-context.js',
+  './js/places-store.js',
+  './js/site-nav.js',
   './js/weather-ui.js',
   './js/charts.js',
   './js/history-charts.js',

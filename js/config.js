@@ -1,5 +1,5 @@
 /** Povečaj ob večjih popravkih – počisti star predpomnilnik v brskalniku */
-export const APP_VERSION = '1.7.8';
+export const APP_VERSION = '1.9.0';
 
 /** Weather Underground PWS (ključ gre tudi v sw.js za proxy) */
 export const PWS = {

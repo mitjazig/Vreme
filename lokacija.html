@@ -60,6 +60,22 @@
 
     <main class="main main--forecast" id="main-content">
 
+      <div id="loc-mine" class="loc-mine" hidden>
+        <div class="loc-mine__block">
+          <div class="loc-mine__head">
+            <h2 class="loc-mine__title">Moji kraji</h2>
+          </div>
+          <div id="loc-favs" class="loc-chip-row" role="list"></div>
+        </div>
+        <div class="loc-mine__block" id="loc-recent-wrap" hidden>
+          <div class="loc-mine__head">
+            <h2 class="loc-mine__title">Nazadnje</h2>
+            <button type="button" id="btn-clear-recent" class="btn-text">Počisti</button>
+          </div>
+          <div id="loc-recent" class="loc-chip-row" role="list"></div>
+        </div>
+      </div>
+
       <!-- Prazno stanje -->
       <div id="loc-empty" class="loc-empty">
         <div class="loc-empty__icon">📍</div>
@@ -99,6 +115,7 @@
               <h2 class="card__title" id="loc-now-title">Trenutno</h2>
               <p class="card__desc" id="loc-now-desc">—</p>
             </div>
+            <button type="button" id="btn-fav-toggle" class="btn btn--ghost fav-toggle" aria-pressed="false" title="Dodaj med priljubljene" aria-label="Dodaj med priljubljene">☆</button>
           </div>
           <div id="loc-current" class="loc-current-body"></div>
         </section>

@@ -46,12 +46,18 @@
     <main class="main">
       <div class="stations-page-wrap">
 
-        <!-- Sort kontrole -->
-        <div class="stations-sort-bar">
-          <button class="sort-btn sort-btn--active" data-sort="name">A–Z</button>
-          <button class="sort-btn" data-sort="temp-desc">🌡️ Najtopleje</button>
-          <button class="sort-btn" data-sort="temp-asc">🥶 Najhladnejše</button>
-          <button class="sort-btn" data-sort="wind-desc">💨 Najvetrovnejše</button>
+        <div class="stations-toolbar">
+          <label class="stations-search">
+            <span class="sr-only">Išči postajo</span>
+            <input id="stations-filter" type="search" class="stations-search__input" placeholder="Išči postajo…" autocomplete="off" />
+          </label>
+          <div class="stations-sort-bar" role="group" aria-label="Razvrsti postaje">
+            <button type="button" class="sort-btn sort-btn--active" data-sort="name">A–Z</button>
+            <button type="button" class="sort-btn" data-sort="temp-desc">🌡️ Najtopleje</button>
+            <button type="button" class="sort-btn" data-sort="temp-asc">🥶 Najhladnejše</button>
+            <button type="button" class="sort-btn" data-sort="wind-desc">💨 Najvetrovnejše</button>
+            <button type="button" class="sort-btn" data-sort="rain-desc">🌧 Padavine</button>
+          </div>
         </div>
 
         <!-- Seznam postaj -->

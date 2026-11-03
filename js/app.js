@@ -8,13 +8,20 @@ import { initPwaUpdates } from './pwa-update.js';
 import { initContrast } from './contrast.js';
 import { loadWeatherBundle, fetchDayReadings, fetchMonthReadings } from './sheets.js';
 import { renderHourlyChart, renderDailyChart, renderPrecipChart24h, renderLiveChart } from './charts.js';
-import { calcBoraJugo } from './bora.js';
-import { fetchYesterdayModels } from './forecast.js';
+import { calcBoraJugo, enrichBoraWithForecast } from './bora.js';
+import { fetchYesterdayModels, fetchWindForecast, fetchHourlyForecast } from './forecast.js';
 import { fetchMushroomIndex } from './mushrooms.js';
 import { fetchPwsTodayLive, decimateReadings } from './pws.js';
-import { buildDayBrief } from './brief.js';
 import { getFolkSaying, getOnThisDayNote } from './folk.js';
 import { fetchOnThisDay, kindLabel } from './onthisday.js';
+import { getStationStatus } from './station-status.js';
+import { humidityComfort } from './weather-comfort.js';
+import { buildTodayBullets, buildImportantHighlights } from './weather-summary.js';
+import { compareWithYesterday, pressureTrend, chartDaySummary } from './weather-comparisons.js';
+import { buildDayTimeline, rainOutlook } from './weather-events.js';
+import { saveWeatherContext } from './weather-context.js';
+import { msToKmh } from './weather-thresholds.js';
+import './site-nav.js';
 
 import {
   windLabel,
@@ -144,13 +151,19 @@ function renderMetrics(latest, readings) {
       ? `<span class="now-stat__sub">Zadnji: ${lastRain}</span>`
       : '0 mm';
 
+  const comfort = humidityComfort(latest.temp, latest.humidity);
   const items = [
     { short: 'Vlaž.', value: formatNum(latest.humidity, '%', 0) },
+    {
+      short: 'Rosa',
+      value: comfort
+        ? `${comfort.dew.toFixed(0)}° <span class="now-stat__sub">${comfort.label}</span>`
+        : '—',
+    },
     { short: 'Tlak',  value: formatNum(latest.pressure, ' hPa', 0) },
     { short: 'Dež',   value: rainValue },
-    { short: 'Sunek', value: formatNum(latest.windGust, ' m/s', 1) },
+    { short: 'Sunek', value: latest.windGust != null ? `${(latest.windGust * 3.6).toFixed(0)} km/h` : '—' },
     { short: 'UV',    value: formatNum(latest.uv, '', 0) },
-    { short: 'Sonce', value: formatNum(latest.solar, ' W/m²', 0) },
   ];
 
   // Trend + občutek v hero
@@ -416,22 +429,121 @@ function renderBbqHome(latest) {
     ${warnings.length ? `<div class="bbq-warnings">${warnings.map(w => `<span class="bbq-warning">${w}</span>`).join('')}</div>` : ''}`;
 }
 
+function renderStationStatus(latest) {
+  const el = document.getElementById('station-status');
+  if (!el) return;
+  const st = getStationStatus(latest?.time);
+  el.hidden = false;
+  const icon = st.level === 'fresh' ? '🟢' : st.level === 'stale' ? '🟡' : st.level === 'offline' ? '🔴' : '⚪';
+  el.className = `station-status ${st.cls}`;
+  el.innerHTML = `<span class="station-status__icon" aria-hidden="true">${icon}</span>
+    <span class="station-status__label">${st.label}</span>
+    <span class="station-status__detail">${st.detail}</span>`;
+}
+
 function renderBrief(latest, summary, readings) {
   const el = document.getElementById('brief-content');
   const sub = document.getElementById('brief-sub');
   if (!el) return;
   const bora = calcBoraJugo(latest);
-  const brief = buildDayBrief({ latest, summary, readings, bora });
+  const bullets = buildTodayBullets({ latest, summary, readings, bora });
   if (sub) {
     sub.textContent = new Date().toLocaleDateString('sl-SI', {
       weekday: 'long', day: 'numeric', month: 'long',
     });
   }
+  if (!bullets.length) {
+    el.innerHTML = '<p class="forecast-loading">Podatek trenutno ni na voljo.</p>';
+    return;
+  }
   el.innerHTML = `
-    <ol class="brief-list">
-      ${brief.lines.map((line) => `<li>${line}</li>`).join('')}
-    </ol>
-    <p class="tide-note">${brief.meta}</p>`;
+    <ul class="brief-bullets">
+      ${bullets.map((b) => {
+        const t = typeof b === 'string' ? b : b.text;
+        const href = typeof b === 'object' ? b.href : null;
+        return href
+          ? `<li><a class="brief-link" href="${href}">${t}</a></li>`
+          : `<li>${t}</li>`;
+      }).join('')}
+    </ul>
+    <p class="tide-note">IKOPER43 · iz meritev postaje · <a class="inline-link" href="./forecast.html#sec-danes">Celotna napoved</a></p>`;
+}
+
+function renderImportant(latest, summary, readings, extras = {}) {
+  const card = document.getElementById('important-card');
+  const el = document.getElementById('important-content');
+  if (!card || !el) return;
+  const bora = calcBoraJugo(latest);
+  const items = buildImportantHighlights({ latest, summary, readings, bora, extras });
+  if (!items.length) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+  el.innerHTML = `<ul class="important-list">${items.map((it) => {
+    const body = it.href
+      ? `<a class="important-list__link" href="${it.href}">${it.text}</a>`
+      : `<span>${it.text}</span>`;
+    return `<li><span class="important-list__icon" aria-hidden="true">${it.icon}</span>${body}</li>`;
+  }).join('')}</ul>`;
+}
+
+function renderYesterdayCompare(latest, readings) {
+  const card = document.getElementById('yesterday-card');
+  const el = document.getElementById('yesterday-content');
+  if (!card || !el) return;
+  const cmp = compareWithYesterday(readings, latest);
+  if (!cmp) { card.hidden = true; return; }
+  card.hidden = false;
+  el.innerHTML = `<ul class="context-list">${cmp.lines.map((l) => `<li>${l}</li>`).join('')}</ul>`;
+}
+
+function renderPressure(readings) {
+  const card = document.getElementById('pressure-card');
+  const el = document.getElementById('pressure-content');
+  if (!card || !el) return;
+  const tr = pressureTrend(readings, 6);
+  if (!tr) { card.hidden = true; return; }
+  card.hidden = false;
+  el.innerHTML = `<p class="pressure-line ${tr.cls}">${tr.text}</p>
+    <p class="tide-note">Indikator trenda · ne zanesljiva napoved vremena</p>`;
+}
+
+async function renderTimelineAndRain(readings) {
+  const card = document.getElementById('timeline-card');
+  const el = document.getElementById('timeline-content');
+  const rainEl = document.getElementById('rain-outlook');
+  let windFc = null;
+  let hourly = null;
+  try {
+    [windFc, hourly] = await Promise.all([
+      fetchWindForecast().catch(() => null),
+      fetchHourlyForecast().catch(() => null),
+    ]);
+  } catch { /* ignore */ }
+
+  if (card && el) {
+    const events = buildDayTimeline(readings, windFc);
+    if (!events.length) {
+      card.hidden = true;
+    } else {
+      card.hidden = false;
+      el.innerHTML = `<ol class="timeline-list">${events.map((e) => `
+        <li><time>${e.time}</time><span>${e.text}</span></li>`).join('')}</ol>`;
+    }
+  }
+
+  if (rainEl) {
+    const msg = rainOutlook(hourly);
+    if (msg) {
+      rainEl.hidden = false;
+      rainEl.textContent = msg;
+    } else {
+      rainEl.hidden = true;
+    }
+  }
+
+  return windFc;
 }
 
 async function renderLiveWuChart() {
@@ -451,6 +563,12 @@ async function renderLiveWuChart() {
     if (sub) {
       sub.textContent = `${live.length} točk danes · prikaz ${pts.length} · T in sunki`;
     }
+    const liveSum = document.getElementById('live-chart-summary');
+    const sumTxt = chartDaySummary(pts);
+    if (liveSum) {
+      if (sumTxt) { liveSum.hidden = false; liveSum.textContent = sumTxt; }
+      else liveSum.hidden = true;
+    }
     renderLiveChart(canvas, pts, formatTime);
   } catch (err) {
     console.warn('WU live graf:', err);
@@ -462,12 +580,12 @@ async function renderLiveWuChart() {
 async function renderMushrooms() {
   const el = document.getElementById('mushroom-content');
   const sub = document.getElementById('mushroom-sub');
-  if (!el) return;
+  if (!el) return null;
   try {
     const m = await fetchMushroomIndex();
     if (!m) {
       el.innerHTML = '<p class="forecast-loading">Indeks ni na voljo.</p>';
-      return;
+      return null;
     }
     const pct = (m.score / 10) * 100;
     const sinceStr = m.daysSinceRain != null
@@ -498,8 +616,10 @@ async function renderMushrooms() {
         ? `<div class="bbq-warnings">${m.species.map((s) => `<span class="bbq-warning">🍄 ${s}</span>`).join('')}</div>`
         : ''}
       <p class="tide-note">${m.source} · heuristika, ne uradna napoved</p>`;
+    return m.score;
   } catch (err) {
     el.innerHTML = `<p class="forecast-loading">Gobji indeks ni na voljo (${err.message}).</p>`;
+    return null;
   }
 }
 
@@ -526,16 +646,22 @@ function renderGlance(latest, readings) {
     <div class="glance__chip glance__chip--accent"><span class="glance__k">${bora?.emoji ?? '💨'}</span><span class="glance__v">${windTag}</span></div>`;
 }
 
-function renderBora(latest) {
+function renderBora(latest, enriched = null) {
   const el = $('#bora-content');
+  const sub = document.getElementById('bora-sub');
   if (!el) return;
-  const b = calcBoraJugo(latest);
+  const b = enriched || calcBoraJugo(latest);
   if (!b) {
     el.innerHTML = '<p class="forecast-loading">Ni podatkov o vetru.</p>';
     return;
   }
   const gustKmh = Math.round(b.gustMs * 3.6);
   const dirStr = b.dir != null ? windLabel(b.dir) : '—';
+  const timeline = b.timeline?.length
+    ? `<ul class="bora-timeline">${b.timeline.map((t) => `<li>${t}</li>`).join('')}</ul>`
+    : '';
+  const trend = b.trend ? `<span class="bora-trend">Trend: ${b.trend}</span>` : '';
+  if (sub) sub.textContent = b.timeline ? 'Postaja · Open-Meteo napoved' : 'Obala · iz postaje';
   el.innerHTML = `
     <div class="bora-hero ${b.cls}">
       <span class="bora-hero__emoji">${b.emoji}</span>
@@ -543,11 +669,14 @@ function renderBora(latest) {
         <span class="bora-hero__title">${b.title}</span>
         <span class="bora-hero__meta">${dirStr} · sunki ${gustKmh} km/h</span>
         <span class="bora-hero__tip">${b.tip}</span>
+        ${trend}
       </div>
       <div class="bora-meter" aria-hidden="true">
         ${[1, 2, 3, 4, 5].map((i) => `<span class="bora-meter__seg ${i <= b.score ? 'is-on' : ''}"></span>`).join('')}
       </div>
-    </div>`;
+    </div>
+    ${timeline}
+    <p class="tide-note"><a class="inline-link" href="./forecast.html#sec-veter">Napoved vetra →</a></p>`;
 }
 
 function stationYesterdayStats(readings) {
@@ -612,7 +741,7 @@ async function renderSkill(readings) {
       </div>
       <div class="skill-head"><span></span><span>Max</span><span>±</span><span>Min</span><span>±</span></div>
       ${rows}
-      <p class="tide-note">Odstop = napoved − postaja · ${obs.dateKey}</p>`;
+      <p class="tide-note">Odstop = napoved − postaja · ${obs.dateKey} · primerjava za včeraj (ne 30-dnevni skill board — ni shranjenih napovedi)</p>`;
   } catch (err) {
     el.innerHTML = `<p class="forecast-loading">Primerjava ni na voljo (${err.message}).</p>`;
   }
@@ -967,6 +1096,12 @@ function renderCharts(readings) {
   const hourly = $('#chart-hourly');
   const dailyCanvas = $('#chart-daily');
   const precipCanvas = $('#chart-precip-24h');
+  const sumEl = document.getElementById('hourly-chart-summary');
+  const sum = chartDaySummary(h24);
+  if (sumEl) {
+    if (sum) { sumEl.hidden = false; sumEl.textContent = sum; }
+    else sumEl.hidden = true;
+  }
   if (hourly) renderHourlyChart(hourly, h24, formatTime);
   if (dailyCanvas) renderDailyChart(dailyCanvas, daily);
   if (precipCanvas) renderPrecipChart24h(precipCanvas, h24, formatTime);
@@ -975,22 +1110,72 @@ function renderCharts(readings) {
 function renderAll(bundle, fromCache = false) {
   const { readings, latest, summary, fetchedAt, source } = bundle;
 
+  renderStationStatus(latest);
   renderHero(latest, summary, readings);
   renderGlance(latest, readings);
   renderMetrics(latest, readings);
   renderBrief(latest, summary, readings);
+  const bbqScore = calcBbqStation(latest);
+  renderImportant(latest, summary, readings, { bbqScore });
+  {
+    const bora = calcBoraJugo(latest);
+    const gustKmh = msToKmh(latest?.windGust);
+    let windTag = null;
+    if (bora?.type === 'burja' || bora?.type === 'jugo') {
+      windTag = `${bora.type[0].toUpperCase()}${bora.type.slice(1)} ${gustKmh != null ? `${Math.round(gustKmh)} km/h` : ''}`.trim();
+    } else if (gustKmh != null && gustKmh >= 25) {
+      windTag = `Veter ${Math.round(gustKmh)} km/h`;
+    }
+    saveWeatherContext({
+      place: 'Koper',
+      temp: latest?.temp ?? null,
+      gustKmh: gustKmh ?? null,
+      windTag,
+    });
+  }
+  renderYesterdayCompare(latest, readings);
+  renderPressure(readings);
   renderFolkSaying();
   renderOnThisDay();
   renderMonthSummary();
   renderAgro();
   renderBora(latest);
   renderBbqHome(latest);
-  renderMushrooms();
+  renderMushrooms().then((mScore) => {
+    if (mScore != null) renderImportant(latest, summary, readings, { bbqScore, mushroomScore: mScore });
+  }).catch(() => {});
   renderSkill(readings);
   renderSunStrip();
   renderDayFact(latest);
-  renderAnomaly(readings);
+  renderAnomaly(readings).then(() => {
+    // anomaly delta for highlights – read from card if rendered
+  }).catch(() => {});
   renderLiveWuChart();
+  renderTimelineAndRain(readings).then((windFc) => {
+    if (!windFc) return;
+    const enriched = enrichBoraWithForecast(calcBoraJugo(latest), windFc);
+    renderBora(latest, enriched);
+    if (enriched?.peak?.gustKmh >= 50) {
+      const peakTimeLabel = enriched.peak.time
+        ? enriched.peak.time.toLocaleTimeString('sl-SI', {
+          timeZone: 'Europe/Ljubljana', hour: '2-digit', minute: '2-digit',
+        })
+        : null;
+      renderImportant(latest, summary, readings, {
+        bbqScore,
+        peakGustKmh: enriched.peak.gustKmh,
+        peakTimeLabel,
+      });
+      saveWeatherContext({
+        place: 'Koper',
+        temp: latest?.temp ?? null,
+        gustKmh: enriched.peak.gustKmh,
+        windTag: enriched.type === 'burja' || enriched.type === 'jugo'
+          ? `${enriched.type[0].toUpperCase()}${enriched.type.slice(1)} → ${Math.round(enriched.peak.gustKmh)} km/h`
+          : `Sunki → ${Math.round(enriched.peak.gustKmh)} km/h`,
+      });
+    }
+  }).catch(() => {});
 
   let chartError = null;
   try {
