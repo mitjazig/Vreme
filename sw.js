@@ -1,4 +1,4 @@
-const CACHE = 'vreme-pwa-static-v62';
+const CACHE = 'vreme-pwa-static-v63';
 
 const PWS_STATION = 'IKOPER43';
 const PWS_API_KEY = '422e0bf8dee443c2ae0bf8dee4e3c22c';

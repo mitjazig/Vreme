@@ -4509,3 +4509,65 @@ html[data-contrast="high"] .page-jump {
   .header__title { font-size: 1.05rem; }
   .wx-chip { display: none; }
 }
+
+/* —— Meteogram-lite (ECMWF ENS) —— */
+.chart-wrap--meteogram {
+  height: 220px;
+  margin: 0.35rem 0.75rem 0.25rem;
+}
+.meteogram-days {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 0.35rem 0.85rem 0.15rem;
+}
+.meteogram-days::-webkit-scrollbar { display: none; }
+.meteogram-day {
+  flex: 0 0 auto;
+  min-width: 4.6rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--card-border);
+  background: rgba(255, 255, 255, 0.03);
+  display: grid;
+  gap: 0.12rem;
+  text-align: center;
+}
+.meteogram-day.is-wide {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.06);
+}
+.meteogram-day__lbl {
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-transform: lowercase;
+}
+.meteogram-day__t {
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--text);
+}
+.meteogram-day__band {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+}
+.meteogram-day__rain {
+  font-size: 0.68rem;
+  color: var(--rain);
+}
+.meteogram-note-wrap {
+  padding: 0 0.85rem 0.75rem;
+}
+html[data-contrast="high"] .meteogram-day {
+  background: #f8fafc;
+}
+html[data-contrast="high"] .meteogram-day.is-wide {
+  background: #fffbeb;
+  border-color: rgba(180, 83, 9, 0.35);
+}
+
+@media (max-width: 375px) {
+  .chart-wrap--meteogram { height: 200px; }
+}

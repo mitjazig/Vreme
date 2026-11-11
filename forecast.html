@@ -55,6 +55,7 @@
       <a class="page-jump__link" href="#sec-veter">Veter</a>
       <a class="page-jump__link" href="#sec-morje">Morje</a>
       <a class="page-jump__link" href="#sec-radar">Radar</a>
+      <a class="page-jump__link" href="#sec-meteogram">Ens</a>
       <a class="page-jump__link" href="#sec-modeli">Modeli</a>
     </nav>
 
@@ -160,6 +161,24 @@
           <p class="forecast-loading">Nalagam napoved…</p>
         </div>
       </section>
+      <!-- Meteogram-lite (ECMWF ENS) -->
+      <section id="sec-meteogram" class="card meteogram-card" aria-label="Meteogram ansambla">
+        <div class="card__head">
+          <span class="card__icon" style="background:rgba(56,189,248,0.15);color:#38bdf8" aria-hidden="true">📊</span>
+          <div>
+            <h2 class="card__title">Meteogram</h2>
+            <p class="card__desc" id="meteogram-sub">ECMWF ENS · Koper · pas 10–90 %</p>
+          </div>
+        </div>
+        <div id="meteogram-days" class="meteogram-days" hidden></div>
+        <div class="chart-wrap chart-wrap--meteogram">
+          <canvas id="chart-meteogram" aria-label="Meteogram temperature in padavin z ansamblom"></canvas>
+        </div>
+        <div id="meteogram-content" class="meteogram-note-wrap">
+          <p class="forecast-loading">Nalagam ansambel…</p>
+        </div>
+      </section>
+
         <!-- Primerjava modelov -->
       <section id="sec-modeli" class="card" aria-label="Primerjava modelov">
         <div class="card__head">
