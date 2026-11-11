@@ -739,3 +739,126 @@ export async function fetchYesterdayModels(dateKey) {
   }
   return { dateKey, models: out };
 }
+
+/** —— Meteogram-lite (ECMWF ENS) —— */
+function percentile(sorted, p) {
+  if (!sorted?.length) return null;
+  const idx = (sorted.length - 1) * p;
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] * (1 - (idx - lo)) + sorted[hi] * (idx - lo);
+}
+
+function memberKeys(hourly, prefix) {
+  return Object.keys(hourly)
+    .filter((k) => k === prefix || k.startsWith(`${prefix}_member`))
+    .sort();
+}
+
+function valuesAt(hourly, keys, i) {
+  const out = [];
+  for (const k of keys) {
+    const v = hourly[k]?.[i];
+    if (v != null && Number.isFinite(v)) out.push(v);
+  }
+  out.sort((a, b) => a - b);
+  return out;
+}
+
+/**
+ * ECMWF IFS ensemble za Koper – mediana + pas 10–90 %.
+ * Vir: Open-Meteo Ensemble API (brez ključa, CORS).
+ */
+export async function fetchMeteogramEnsemble({ days = 7, stepHours = 3 } = {}) {
+  const params = new URLSearchParams({
+    latitude: LAT,
+    longitude: LON,
+    models: 'ecmwf_ifs025',
+    hourly: 'temperature_2m,precipitation',
+    timezone: 'Europe/Ljubljana',
+    forecast_days: String(Math.min(35, Math.max(1, days))),
+  });
+
+  const res = await fetch(`https://ensemble-api.open-meteo.com/v1/ensemble?${params}`);
+  if (!res.ok) throw new Error(`Ensemble HTTP ${res.status}`);
+  const json = await res.json();
+  const { hourly } = json;
+  if (!hourly?.time?.length) throw new Error('Ni ensemble podatkov');
+
+  const tempKeys = memberKeys(hourly, 'temperature_2m');
+  const rainKeys = memberKeys(hourly, 'precipitation');
+  if (tempKeys.length < 5) throw new Error('Premalo ensemble članov');
+
+  const now = Date.now() - 30 * 60_000;
+  const points = [];
+  for (let i = 0; i < hourly.time.length; i++) {
+    const time = new Date(hourly.time[i]);
+    if (time.getTime() < now) continue;
+    const hour = Number(hourly.time[i].slice(11, 13));
+    if (stepHours > 1 && hour % stepHours !== 0) continue;
+
+    const temps = valuesAt(hourly, tempKeys, i);
+    const rains = valuesAt(hourly, rainKeys, i);
+    if (!temps.length) continue;
+
+    points.push({
+      time,
+      tempMedian: percentile(temps, 0.5),
+      tempP10: percentile(temps, 0.1),
+      tempP90: percentile(temps, 0.9),
+      rainMedian: rains.length ? percentile(rains, 0.5) : 0,
+      rainP90: rains.length ? percentile(rains, 0.9) : 0,
+      members: temps.length,
+    });
+  }
+
+  // Dnevni povzetek (iz vseh ur, ne samo vzorca)
+  const dayMap = new Map();
+  const fmt = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Ljubljana' });
+  for (let i = 0; i < hourly.time.length; i++) {
+    const time = new Date(hourly.time[i]);
+    if (time.getTime() < now) continue;
+    const key = fmt.format(time);
+    const temps = valuesAt(hourly, tempKeys, i);
+    const rains = valuesAt(hourly, rainKeys, i);
+    if (!temps.length) continue;
+    let day = dayMap.get(key);
+    if (!day) {
+      day = {
+        date: new Date(`${key}T12:00:00`),
+        tMinMed: [],
+        tMaxMed: [],
+        tMinP10: [],
+        tMaxP90: [],
+        rainMedSum: 0,
+        rainP90Sum: 0,
+      };
+      dayMap.set(key, day);
+    }
+    const med = percentile(temps, 0.5);
+    day.tMinMed.push(med);
+    day.tMaxMed.push(med);
+    day.tMinP10.push(percentile(temps, 0.1));
+    day.tMaxP90.push(percentile(temps, 0.9));
+    day.rainMedSum += rains.length ? percentile(rains, 0.5) : 0;
+    day.rainP90Sum += rains.length ? percentile(rains, 0.9) : 0;
+  }
+
+  const daily = [...dayMap.values()].map((d) => ({
+    date: d.date,
+    tMin: Math.min(...d.tMinMed),
+    tMax: Math.max(...d.tMaxMed),
+    tMinP10: Math.min(...d.tMinP10),
+    tMaxP90: Math.max(...d.tMaxP90),
+    rainMedian: d.rainMedSum,
+    rainP90: d.rainP90Sum,
+  }));
+
+  return {
+    model: 'ECMWF IFS ENS 0.25°',
+    members: tempKeys.length,
+    points,
+    daily,
+  };
+}

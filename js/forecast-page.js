@@ -1,10 +1,13 @@
 import { initPwaUpdates } from './pwa-update.js';
 import { initContrast } from './contrast.js';
-import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides, fetchFireDanger, fetchLocationForecast, reverseGeocode, fetchWarnings, fetchWindyWaves, fetchWindForecast, fetchModelComparison, fetchFreezingLevel, fetchSnowForecast } from './forecast.js';
+import { fetchForecast, fetchHourlyForecast, fetchSeaTemp, wmoIcon, wmoLabel, fetchAirQuality, calcTides, fetchFireDanger, fetchLocationForecast, reverseGeocode, fetchWarnings, fetchWindyWaves, fetchWindForecast, fetchModelComparison, fetchFreezingLevel, fetchSnowForecast, fetchMeteogramEnsemble } from './forecast.js';
 import { moonPhase, STATION_LAT, STATION_LON } from './astro.js';
 import { initNotifications, notifyWarnings } from './notifications.js';
 import { saveWeatherContext } from './weather-context.js';
+import { CHART } from './chart-theme.js';
 import './site-nav.js';
+
+let meteogramChart = null;
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -73,7 +76,178 @@ function renderModelComparison(data, error) {
   }).join('');
 
   el.innerHTML = `${header}${rows}
-    <p class="tide-note">Kaj gledati: ECMWF je pogosto najbolj zanesljiv za Evropo, ICON za kratki rok, GFS za grobo usmeritev. Razlike med modeli kažejo negotovost. · Open-Meteo</p>`;
+    <p class="tide-note">Kaj gledati: ECMWF je pogosto najbolj zanesljiv za Evropo, ICON za kratki rok, GFS za grobo usmeritev. Razlike med modeli kažejo negotovost. Za pas 10–90 % glej <a class="inline-link" href="#sec-meteogram">meteogram</a>. · Open-Meteo</p>`;
+}
+
+/** —— Meteogram-lite (ECMWF ENS) —— */
+function renderMeteogram(data, error) {
+  const note = document.getElementById('meteogram-content');
+  const daysEl = document.getElementById('meteogram-days');
+  const sub = document.getElementById('meteogram-sub');
+  const canvas = document.getElementById('chart-meteogram');
+  if (!note || !canvas) return;
+
+  if (!data?.points?.length) {
+    if (meteogramChart) { meteogramChart.destroy(); meteogramChart = null; }
+    if (daysEl) { daysEl.hidden = true; daysEl.innerHTML = ''; }
+    note.innerHTML = `<p class="forecast-loading">Meteogram trenutno ni na voljo.${error?.message ? '' : ''}</p>`;
+    return;
+  }
+
+  if (sub) {
+    sub.textContent = `${data.model} · ${data.members} članov · 7 dni`;
+  }
+
+  const DAY_SL = ['ned', 'pon', 'tor', 'sre', 'čet', 'pet', 'sob'];
+  if (daysEl && data.daily?.length) {
+    daysEl.hidden = false;
+    daysEl.innerHTML = data.daily.map((d, i) => {
+      const label = i === 0 ? 'Danes' : i === 1 ? 'Jutri' : `${DAY_SL[d.date.getDay()]} ${d.date.getDate()}.`;
+      const rain = d.rainMedian >= 0.2
+        ? `${d.rainMedian < 10 ? d.rainMedian.toFixed(1) : Math.round(d.rainMedian)} mm`
+        : 'suho';
+      const spread = (d.tMaxP90 - d.tMinP10);
+      const spreadCls = spread >= 8 ? 'is-wide' : '';
+      return `<div class="meteogram-day ${spreadCls}">
+        <span class="meteogram-day__lbl">${label}</span>
+        <span class="meteogram-day__t">${Math.round(d.tMin)}–${Math.round(d.tMax)}°</span>
+        <span class="meteogram-day__band" title="Pas 10–90 %">${Math.round(d.tMinP10)}…${Math.round(d.tMaxP90)}°</span>
+        <span class="meteogram-day__rain">${rain}</span>
+      </div>`;
+    }).join('');
+  }
+
+  const labels = data.points.map((p) => {
+    const day = p.time.toLocaleDateString('sl-SI', { weekday: 'short', day: 'numeric', timeZone: 'Europe/Ljubljana' });
+    const hm = p.time.toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Ljubljana' });
+    return `${day} ${hm}`;
+  });
+
+  if (meteogramChart) { meteogramChart.destroy(); meteogramChart = null; }
+
+  const highContrast = document.documentElement.dataset.contrast === 'high';
+  const band = highContrast ? 'rgba(3, 105, 161, 0.18)' : 'rgba(56, 189, 248, 0.18)';
+  const line = highContrast ? '#0369a1' : CHART.cold;
+  const rain = highContrast ? 'rgba(4, 120, 87, 0.55)' : 'rgba(52, 211, 153, 0.45)';
+  const grid = highContrast ? 'rgba(15, 23, 42, 0.08)' : CHART.grid;
+  const text = highContrast ? '#334155' : CHART.text;
+
+  meteogramChart = new Chart(canvas, {
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'line',
+          label: 'T 90 %',
+          data: data.points.map((p) => p.tempP90),
+          borderWidth: 0,
+          pointRadius: 0,
+          fill: false,
+          yAxisID: 'yTemp',
+          order: 3,
+        },
+        {
+          type: 'line',
+          label: 'Pas 10–90 %',
+          data: data.points.map((p) => p.tempP10),
+          borderWidth: 0,
+          pointRadius: 0,
+          fill: '-1',
+          backgroundColor: band,
+          yAxisID: 'yTemp',
+          order: 2,
+        },
+        {
+          type: 'line',
+          label: 'T mediana',
+          data: data.points.map((p) => p.tempMedian),
+          borderColor: line,
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.3,
+          yAxisID: 'yTemp',
+          order: 1,
+        },
+        {
+          type: 'bar',
+          label: 'Dež mediana',
+          data: data.points.map((p) => p.rainMedian),
+          backgroundColor: rain,
+          borderWidth: 0,
+          yAxisID: 'yRain',
+          order: 4,
+          barPercentage: 0.85,
+          categoryPercentage: 0.9,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          labels: {
+            color: text,
+            boxWidth: 10,
+            boxHeight: 10,
+            padding: 12,
+            filter: (item) => item.text !== 'T 90 %',
+          },
+        },
+        tooltip: {
+          callbacks: {
+            afterBody(items) {
+              const i = items[0]?.dataIndex;
+              const p = data.points[i];
+              if (!p) return '';
+              return [
+                `Pas: ${p.tempP10.toFixed(1)}–${p.tempP90.toFixed(1)} °C`,
+                p.rainP90 > 0.05 ? `Dež 90 %: ${p.rainP90.toFixed(1)} mm / 3h` : '',
+              ].filter(Boolean);
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: text,
+            font: { size: 9 },
+            maxRotation: 0,
+            autoSkip: true,
+            maxTicksLimit: 8,
+            callback(val, i) {
+              const p = data.points[i];
+              if (!p) return '';
+              if (i === 0 || (data.points[i - 1] && p.time.getDate() !== data.points[i - 1].time.getDate())) {
+                return p.time.toLocaleDateString('sl-SI', { weekday: 'short', day: 'numeric', timeZone: 'Europe/Ljubljana' });
+              }
+              return '';
+            },
+          },
+          grid: { color: grid },
+        },
+        yTemp: {
+          position: 'left',
+          ticks: { color: text, font: { size: 10 }, callback: (v) => `${v}°` },
+          grid: { color: grid },
+          title: { display: true, text: '°C', color: text, font: { size: 10 } },
+        },
+        yRain: {
+          position: 'right',
+          min: 0,
+          suggestedMax: Math.max(2, ...data.points.map((p) => p.rainP90 || p.rainMedian || 0)) * 1.2,
+          ticks: { color: text, font: { size: 10 }, callback: (v) => `${v}` },
+          grid: { drawOnChartArea: false },
+          title: { display: true, text: 'mm / 3h', color: text, font: { size: 10 } },
+        },
+      },
+    },
+  });
+
+  note.innerHTML = `<p class="tide-note">Črta = mediana ansambla, senčen pas = 10–90 % članov (širši pas = večja negotovost). Stolpci = mediana padavin na 3 h. Ni uradna napoved ARSO · Open-Meteo Ensemble</p>`;
 }
 
 function renderHourly(hours) {
@@ -985,7 +1159,7 @@ function renderWarnings(warnings) {
 async function load() {
   setStatus('Nalagam napoved…');
   try {
-    const [forecast, hourly, sea, aq, fire, warnings, waves, windFc, models, freeze, snow] = await Promise.allSettled([
+    const [forecast, hourly, sea, aq, fire, warnings, waves, windFc, models, freeze, snow, meteogram] = await Promise.allSettled([
       fetchForecast(),
       fetchHourlyForecast(),
       fetchSeaTemp(),
@@ -997,6 +1171,7 @@ async function load() {
       fetchModelComparison(),
       fetchFreezingLevel(),
       fetchSnowForecast(),
+      fetchMeteogramEnsemble({ days: 7, stepHours: 3 }),
     ]);
 
     if (forecast.status === 'fulfilled') renderForecast(forecast.value);
@@ -1037,6 +1212,9 @@ async function load() {
 
     if (models.status === 'fulfilled') renderModelComparison(models.value);
     else renderModelComparison(null, models.reason);
+
+    if (meteogram.status === 'fulfilled') renderMeteogram(meteogram.value);
+    else renderMeteogram(null, meteogram.reason);
 
     if (hourly.status === 'fulfilled') {
       renderTempChart(hourly.value);
